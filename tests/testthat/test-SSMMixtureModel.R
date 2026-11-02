@@ -39,17 +39,18 @@
 
 .ssm_test_target <- function(parameters, dat) {
   eta <- .ssm_test_transport(parameters$z_raw, parameters$sigma_eta)
-  mu <- qlogis(parameters$theta1) + c(0, cumsum(eta))
-  target <- dbeta(parameters$theta1, dat$prior_theta1_a, dat$prior_theta1_b, log = TRUE) +
+  theta1 <- plogis(parameters$mu1)
+  mu <- parameters$mu1 + c(0, cumsum(eta))
+  target <- dbeta(theta1, dat$prior_theta1_a, dat$prior_theta1_b, log = TRUE) +
             dnorm(parameters$sigma_eta, 0, dat$prior_sigma_sd, log = TRUE) +
             sum(dnorm(parameters$z_raw, log = TRUE))
   if (!is.null(parameters$beta_predictor)) {
     mu <- mu + as.numeric(dat$X %*% parameters$beta_predictor)
     target <- target + sum(dcauchy(parameters$beta_predictor, 0, dat$prior_beta_scale, log = TRUE))
   }
-  # Stan's unconstrained target also includes the theta1 and sigma Jacobians.
+  # Independent probability-scale Beta calculation plus the mu1 and sigma Jacobians.
   target + sum(dbinom(dat$y, dat$n, plogis(mu), log = TRUE)) +
-    log(parameters$theta1) + log1p(-parameters$theta1) + log(parameters$sigma_eta)
+    log(theta1) + log1p(-theta1) + log(parameters$sigma_eta)
 }
 
 test_that("mixture initialization covers four scales and the singleton case", {
@@ -61,7 +62,8 @@ test_that("mixture initialization covers four scales and the singleton case", {
                  rep(c(0.08, 0.2, 0.5, 1), 2))
     expect_equal(inits[1:4], inits[5:8])
     for (initial in inits) {
-      expect_true(initial$theta1 > 0 && initial$theta1 < 1)
+      expect_true(is.finite(initial$mu1))
+      expect_true(plogis(initial$mu1) > 0 && plogis(initial$mu1) < 1)
       expect_equal(dim(initial$z_raw), 3L)
       expect_true(all(is.finite(initial$z_raw)))
       if (predictor) expect_identical(initial$beta_predictor, array(0, dim = 1L))
@@ -96,14 +98,14 @@ test_that("both precompiled models match independent mixture transport and outpu
     expect_s4_class(model, "stanmodel")
     dat <- .ssm_test_data(length(z) + 1L, predictor = name == "complex")
     for (sigma in c(0.02, 0.2, 1.2)) {
-      initial <- list(theta1 = 0.13, sigma_eta = sigma, z_raw = array(z, dim = length(z)))
+      initial <- list(mu1 = qlogis(0.13), sigma_eta = sigma, z_raw = array(z, dim = length(z)))
       if (name == "complex") initial$beta_predictor <- array(0.4, dim = 1L)
       fit <- rstan::sampling(model, data = dat, init = list(initial),
                              chains = 1, iter = 1, warmup = 0,
                              algorithm = "Fixed_param", seed = 42, refresh = 0)
       draws <- rstan::extract(fit)
       eta <- .ssm_test_transport(z, sigma)
-      nu <- qlogis(initial$theta1) + c(0, cumsum(eta))
+      nu <- initial$mu1 + c(0, cumsum(eta))
       mu <- if (name == "complex") nu + as.numeric(dat$X %*% initial$beta_predictor) else nu
       expect_equal(as.numeric(draws$eta), eta, tolerance = 1e-8)
       expect_equal(as.numeric(draws$mu), as.numeric(mu), tolerance = 1e-8)
@@ -129,7 +131,7 @@ test_that("both models handle one lot and predict observed defects when sampling
                            chains = 1, iter = 1, warmup = 0,
                            algorithm = "Fixed_param", seed = 42, refresh = 0)
     draws <- rstan::extract(fit)
-    expect_equal(as.numeric(draws$theta), initial[[1]]$theta1, tolerance = 1e-10)
+    expect_equal(as.numeric(draws$theta), plogis(initial[[1]]$mu1), tolerance = 1e-10)
     expect_equal(as.numeric(draws$y_pred), as.numeric(dat$y))
     # RStan may omit zero-length outputs from extract(); either representation is empty.
     expect_length(draws$eta, 0)
@@ -150,10 +152,10 @@ test_that("the transported target has the requested priors and no extra mixture 
       # Instantiate the model for log_prob access without drawing a chain.
       fit <- rstan::sampling(.ssm_test_model(name), data = dat,
                              chains = 0, iter = 0, seed = 42, refresh = 0)
-      reference <- list(theta1 = 0.08, sigma_eta = 0.3, z_raw = c(-1.2, 0.25, 2.8))
+      reference <- list(mu1 = qlogis(0.08), sigma_eta = 0.3, z_raw = c(-1.2, 0.25, 2.8))
       if (name == "complex") reference$beta_predictor <- array(0.5, dim = 1L)
       candidates <- list(reference, reference, reference)
-      candidates[[1]]$theta1 <- 0.27
+      candidates[[1]]$mu1 <- qlogis(0.27)
       candidates[[2]]$sigma_eta <- 0.8
       candidates[[3]]$z_raw <- c(-0.8, -2, 1.4)
       if (name == "complex") {
@@ -176,10 +178,10 @@ test_that("one matrix column retains the previous scalar-predictor mathematical 
   dat <- .ssm_test_data(5, predictor = TRUE)
   fit <- rstan::sampling(.ssm_test_model("complex"), data = dat,
                          chains = 0, iter = 0, seed = 42, refresh = 0)
-  parameters <- list(theta1 = 0.13, sigma_eta = 0.25,
+  parameters <- list(mu1 = qlogis(0.13), sigma_eta = 0.25,
                      z_raw = c(-1.4, 0.3, 1.7, -0.6))
   eta <- .ssm_test_transport(parameters$z_raw, parameters$sigma_eta)
-  nu <- qlogis(parameters$theta1) + c(0, cumsum(eta))
+  nu <- parameters$mu1 + c(0, cumsum(eta))
   predictor <- as.numeric(scale(seq_len(dat$T)))
   beta <- c(-1.1, 0, 0.5, 1.7)
   # All terms unrelated to the scalar slope cancel in these differences.
@@ -204,7 +206,7 @@ test_that("multiple numeric coefficients match independent targets and gradients
       dat$prior_beta_scale <- prior_scale
       fit <- rstan::sampling(.ssm_test_model("complex"), data = dat,
                              chains = 0, iter = 0, seed = 42, refresh = 0)
-      reference <- list(theta1 = 0.13, sigma_eta = 0.3,
+      reference <- list(mu1 = qlogis(0.13), sigma_eta = 0.3,
                          z_raw = c(-1.2, 0.25, 2.8, -0.4, 1.1, 0.5, -1.5),
                          beta_predictor = array(c(0.5, -0.3, 0.15)[seq_len(K)], dim = K))
       unconstrained <- rstan::unconstrain_pars(fit, reference)
@@ -220,7 +222,7 @@ test_that("multiple numeric coefficients match independent targets and gradients
 
       stan_gradient <- as.numeric(rstan::grad_log_prob(fit, unconstrained, adjust_transform = TRUE))
       eta <- .ssm_test_transport(reference$z_raw, reference$sigma_eta)
-      nu <- qlogis(reference$theta1) + c(0, cumsum(eta))
+      nu <- reference$mu1 + c(0, cumsum(eta))
       theta <- plogis(nu + as.numeric(dat$X %*% reference$beta_predictor))
       beta <- as.numeric(reference$beta_predictor)
       beta_gradient <- as.numeric(crossprod(dat$X, dat$y - dat$n * theta)) -
@@ -229,7 +231,7 @@ test_that("multiple numeric coefficients match independent targets and gradients
 
       independent_target <- function(u) {
         parameters <- list(
-          theta1 = plogis(u[1]), sigma_eta = exp(u[2]),
+          mu1 = u[1], sigma_eta = exp(u[2]),
           z_raw = u[2L + seq_len(dat$T - 1L)],
           beta_predictor = tail(u, K)
         )
@@ -249,7 +251,7 @@ test_that("multiple numeric coefficients match independent targets and gradients
 
 test_that("permuting numeric columns and coefficients preserves the target and mapped gradients", {
   dat <- .ssm_test_data(8, predictor = TRUE, K = 3L)
-  parameters <- list(theta1 = 0.13, sigma_eta = 0.3,
+  parameters <- list(mu1 = qlogis(0.13), sigma_eta = 0.3,
                      z_raw = c(-1.2, 0.25, 2.8, -0.4, 1.1, 0.5, -1.5),
                      beta_predictor = array(c(0.5, -0.3, 0.15), dim = 3L))
   fit <- rstan::sampling(.ssm_test_model("complex"), data = dat,
@@ -287,7 +289,7 @@ test_that("finite-lot predictions respect zero, partial and complete inspection"
       dat$n[T] <- cases$n[i]
       dat$y[T] <- cases$y[i]
       initial <- initialize(dat, chains = 1, predictor = name == "complex")
-      initial[[1]]$theta1 <- 0.35
+      initial[[1]]$mu1 <- qlogis(0.35)
       initial[[1]]$z_raw <- array(rep(0, T - 1L), dim = T - 1L)
       if (name == "complex")
         initial[[1]]$beta_predictor <- array(c(0.2, -0.1, 0.3)[seq_len(K)], dim = K)
@@ -323,7 +325,7 @@ test_that("finite-lot predictions respect zero, partial and complete inspection"
 test_that("empirical predictive weights do not assign mass below observed defects", {
   predictive_pmf <- getFromNamespace(".asSSM_predictivePMF", "jaspAcceptanceSampling")
   pmf <- predictive_pmf(c(4, 5, 5, 6), sT = 1000, nT = 20, yT = 4)
-  expect_equal(pmf$defects, 0:1000)
+  expect_equal(pmf$defects, 4:6)
   expect_equal(pmf$prob[pmf$defects %in% 4:6], c(0.25, 0.5, 0.25))
   expect_equal(sum(pmf$prob), 1)
   expect_equal(sum(pmf$prob[pmf$defects < 4]), 0)

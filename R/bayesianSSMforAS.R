@@ -129,6 +129,13 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   }
 
   if (!is.null(dataset) && options[["ssm_time"]] != "" && options[["ssm_time"]] %in% colnames(dataset)) {
+    lot <- dataset[[options[["ssm_time"]]]]
+    if (is.ordered(lot)) {
+      # Preloaded Ordinal columns are ordered factors: preserve labels, not level codes.
+      numericLot <- suppressWarnings(as.numeric(as.character(lot)))
+      if (all(is.na(lot) | !is.na(numericLot)))
+        dataset[[options[["ssm_time"]]]] <- numericLot
+    }
     dataset <- dataset[order(dataset[[options[["ssm_time"]]]]), , drop = FALSE]
   }
 
@@ -214,11 +221,15 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
       label <- gettextf("Covariate %s", jaspBase::decodeColNames(name))
       msg <- validateNumeric(predictor, label)
       if (!is.null(msg)) return(msg)
-      predictorSD <- stats::sd(predictor)
-      if (!is.finite(predictorSD) || predictorSD <= .Machine$double.eps^0.5)
+      if (length(unique(predictor)) < 2L)
         return(gettextf("Covariate %s must vary across lots.", jaspBase::decodeColNames(name)))
+      predictorSD <- stats::sd(predictor)
+      if (!is.finite(predictorSD) || predictorSD <= 0)
+        return(gettextf("Covariate %s cannot be standardized numerically. Rescale its values and try again.", jaspBase::decodeColNames(name)))
     }
     design <- .asSSM_predictorDesign(dataset, options)
+    if (any(!is.finite(design$X)) || any(!is.finite(design$scale)) || any(design$scale <= 0))
+      return(gettext("The covariates cannot be standardized numerically. Rescale their values and try again."))
     if (qr(cbind(1, design$X), tol = 1e-10)$rank < length(predictors) + 1L)
       return(gettext("The covariates are linearly dependent (for example, one is a rescaled or shifted copy of another), or there are too few lots to distinguish their effects. Remove redundant covariates or add lots with distinct covariate values."))
   }
@@ -247,7 +258,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   )
 }
 
-.asSSM_modelVersion <- function() "innovation-mixture-numeric-v3"
+.asSSM_modelVersion <- function() "innovation-mixture-numeric-v4"
 
 .asSSM_fitModel <- function(jaspResults, dataset, options) {
 
@@ -428,11 +439,12 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   y_pred <- samples$y_pred
   pmf <- .asSSM_predictivePMF(y_pred, sT, nT, yT)
 
-  limit_AQL <- options[["ssm_controlLimitsLower"]] * sT
-  limit_RQL <- options[["ssm_controlLimitsUpper"]] * sT
+  limit_AQL <- .asSSM_countLimit(options[["ssm_controlLimitsLower"]], sT)
+  limit_RQL <- .asSSM_countLimit(options[["ssm_controlLimitsUpper"]], sT)
 
-  mass_below_AQL <- .asSSM_pmfMassBelow(pmf, limit_AQL)
-  mass_above_RQL <- .asSSM_pmfMassAbove(pmf, limit_RQL)
+  # Tally membership before division so exact empirical threshold ties remain ties.
+  mass_below_AQL <- sum(y_pred < limit_AQL) / length(y_pred)
+  mass_above_RQL <- sum(y_pred > limit_RQL) / length(y_pred)
 
   acceptThreshold <- options[["ssm_decisionAcceptThreshold"]]
   rejectThreshold <- options[["ssm_decisionRejectThreshold"]]
@@ -480,9 +492,9 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     table$addColumnInfo(name = "mean", title = gettext("Mean"), type = "number", format = "dp:3")
     table$addColumnInfo(name = "median", title = gettext("Median"), type = "number", format = "dp:3")
     table$addColumnInfo(name = "lower", title = gettext("Lower"), type = "number", format = "dp:3",
-                       overtitle = gettext("95% Credible Interval"))
+                       overtitle = gettextf("95%% Credible Interval"))
     table$addColumnInfo(name = "upper", title = gettext("Upper"), type = "number", format = "dp:3",
-                       overtitle = gettext("95% Credible Interval"))
+                       overtitle = gettextf("95%% Credible Interval"))
     table$addFootnote(gettext("Coefficients describe the change in log-odds of a defect per one SD increase in the covariate, holding the latent baseline and other covariates fixed. Intervals are equal-tailed."))
     jaspResults[["predictorSummary"]] <- table
   }
@@ -538,11 +550,21 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
   xBreaks <- jaspGraphs::getPrettyAxisBreaks(df$time)
   yBreaks <- jaspGraphs::getPrettyAxisBreaks(c(df$lower, df$upper))
+  if (all(df$lower == 0 & df$upper == 0)) yBreaks <- c(0, 1)
 
-  p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$time, y = .data$mean)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$lower, ymax = .data$upper),
-                         fill = "#c2c2c2", alpha = 0.6) +
-    ggplot2::geom_line(linewidth = 1) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$time, y = .data$mean))
+  if (nrow(df) == 1L) {
+    p <- p +
+      ggplot2::geom_linerange(ggplot2::aes(ymin = .data$lower, ymax = .data$upper),
+                             colour = "#7f7f7f", linewidth = 0.6) +
+      ggplot2::geom_point(size = 2)
+  } else {
+    p <- p +
+      ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$lower, ymax = .data$upper),
+                           fill = "#c2c2c2", alpha = 0.6) +
+      ggplot2::geom_line(linewidth = 1)
+  }
+  p <- p +
     ggplot2::labs(
       x = gettext("Lot"),
       y = gettextf("Defect Rate (%%)")
@@ -577,12 +599,13 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   yT <- dataset[[options[["ssm_count"]]]][nrow(dataset)]
   pmf <- .asSSM_predictivePMF(y_pred, sT, nT, yT)
 
-  limit_AQL <- options[["ssm_controlLimitsLower"]] * sT
-  limit_RQL <- options[["ssm_controlLimitsUpper"]] * sT
+  limit_AQL <- .asSSM_countLimit(options[["ssm_controlLimitsLower"]], sT)
+  limit_RQL <- .asSSM_countLimit(options[["ssm_controlLimitsUpper"]], sT)
 
   # Posterior probabilities for AQL / RQL regions
-  mass_below_AQL <- .asSSM_pmfMassBelow(pmf, limit_AQL)
-  mass_above_RQL <- .asSSM_pmfMassAbove(pmf, limit_RQL)
+  # Tally membership before division so exact empirical threshold ties remain ties.
+  mass_below_AQL <- sum(y_pred < limit_AQL) / length(y_pred)
+  mass_above_RQL <- sum(y_pred > limit_RQL) / length(y_pred)
 
   # Show the central predictive range and both quality limits.
   pred_q <- stats::quantile(y_pred, probs = c(0.001, 0.999), na.rm = TRUE, names = FALSE)
@@ -598,13 +621,16 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   xLower <- min(xBreaks)
   xUpper <- max(xBreaks)
 
-  # Aggregate the deterministic PMF into coarser display bins to keep the
-  # predictive plot visually similar to the original histogram-style output.
+  # Group whole counts rather than cutting between uneven numbers of integers.
+  # Short ranges show one bar per count; wide ranges use at most 30 bins.
   pmf_plot <- pmf[pmf$defects >= xLower & pmf$defects <= xUpper, , drop = FALSE]
   if (nrow(pmf_plot) == 0L)
     pmf_plot <- pmf
 
-  breaks <- seq(xLower, xUpper, length.out = 31)
+  firstCount <- ceiling(xLower)
+  countSpan <- floor(xUpper) - firstCount + 1
+  binWidth <- max(1, ceiling(countSpan / 30))
+  breaks <- firstCount - 0.5 + seq.int(0, ceiling(countSpan / binWidth)) * binWidth
   bin_ids <- cut(pmf_plot$defects, breaks = breaks, include.lowest = TRUE, right = TRUE, labels = FALSE)
   mids <- head(breaks, -1L) + diff(breaks) / 2
   probs <- tapply(pmf_plot$prob, bin_ids, sum)
@@ -614,8 +640,6 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   )
   if (length(probs) > 0L)
     df_hist$prob[as.integer(names(probs))] <- as.numeric(probs)
-
-  binWidth <- if (length(breaks) > 1L) (breaks[2] - breaks[1]) else 1
 
   yBreaks <- jaspGraphs::getPrettyAxisBreaks(c(0, max(df_hist$prob)))
 
@@ -633,7 +657,8 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     ) +
     ggplot2::scale_x_continuous(
       breaks = xBreaks,
-      limits = range(xBreaks)
+      # Keep the complete boundary bars; scale limits otherwise censor them.
+      limits = range(xBreaks, breaks)
     ) +
     ggplot2::scale_y_continuous(
       breaks = yBreaks,
@@ -665,6 +690,14 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   samples <- jaspResults[["fit"]]$object$samples
   theta   <- samples$theta
   df    <- data.frame(x = theta[, ncol(theta)] * 100)
+  if (length(df$x) < 2L || any(!is.finite(df$x))) {
+    plot$setError(gettext("Finite posterior draws are required to plot the defect-rate density. Inspect the sampling diagnostics."))
+    return()
+  }
+  if (all(df$x == df$x[1L])) {
+    plot$setError(gettext("The posterior defect-rate draws have no variation, so a density cannot be estimated. Inspect the sampling diagnostics."))
+    return()
+  }
 
   xBreaks <- jaspGraphs::getPrettyAxisBreaks(df$x)
 
@@ -705,9 +738,17 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
   fit <- jaspResults[["fit"]]$object
   design <- fit$predictor_design
-  beta <- matrix(fit$samples$beta_predictor, ncol = length(design$names))
-  if (nrow(beta) < 2L || any(!is.finite(beta))) {
-    plot$setError(gettext("Finite posterior draws are required to plot the coefficients. Inspect the sampling diagnostics."))
+  number <- length(design$names)
+  beta <- fit$samples$beta_predictor
+  if (is.numeric(beta) && is.null(dim(beta)) && number == 1L)
+    beta <- matrix(beta, ncol = 1L)
+  if (!is.matrix(beta) || !is.numeric(beta) || is.complex(beta) ||
+      nrow(beta) < 2L || ncol(beta) != number || any(!is.finite(beta))) {
+    plot$setError(gettext("Finite posterior draws for every predictor are required to plot the coefficients. Inspect the sampling diagnostics."))
+    return()
+  }
+  if (any(vapply(seq_len(number), function(i) all(beta[, i] == beta[1L, i]), logical(1)))) {
+    plot$setError(gettext("The posterior draws for one or more predictor coefficients have no variation, so their densities cannot be estimated. Inspect the sampling diagnostics."))
     return()
   }
   densities <- lapply(seq_along(design$names), function(i) {
@@ -733,6 +774,15 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   plot$plotObject <- p
 }
 
+.asSSM_countLimit <- function(proportion, lotSize) {
+  limit <- proportion * lotSize
+  integerLimit <- round(limit)
+  # Decimal input and multiplication can move an integer boundary by a few ulps.
+  # A relative tolerance preserves genuine fractional limits, including near zero.
+  tolerance <- 2 * .Machine$double.eps * abs(limit)
+  if (abs(limit - integerLimit) <= tolerance) integerLimit else limit
+}
+
 .asSSM_predictivePMF <- function(y_pred_draws, sT, nT, yT) {
   validCount <- function(x) is.numeric(x) && !is.complex(x) && length(x) == 1L &&
     is.finite(x) && x >= 0 && x == floor(x)
@@ -749,10 +799,13 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     stop(gettext("Posterior predictive defect counts fall outside the possible total given the inspected items. Inspect the model output and refit. An acceptance decision cannot be calculated."), call. = FALSE)
 
   draws <- as.integer(y_pred_draws)
-  probs <- tabulate(draws + 1L, nbins = as.integer(sT) + 1L)
+  # Unobserved counts have exactly zero empirical mass. Store only the sorted
+  # observed support so memory depends on the draws, not on the lot size.
+  support <- sort(unique(draws))
+  probs <- tabulate(match(draws, support), nbins = length(support))
   probs <- probs / sum(probs)
 
-  pmf <- data.frame(defects = 0:sT, prob = probs)
+  pmf <- data.frame(defects = support, prob = probs)
   .asSSM_validatePMF(pmf)
   pmf
 }

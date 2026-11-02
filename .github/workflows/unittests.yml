@@ -23,12 +23,24 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: any::renv
+      - name: Check that the Stan toolchain dependencies are pinned
+        run: Rscript --vanilla tools/check-stan-lockfile.R
       - name: Restore the Stan generation toolchain from renv.lock
         shell: Rscript --vanilla {0}
         run: |
+          lock <- renv::lockfile_read("renv.lock")
+          dependencies <- unique(c("StanHeaders", "rstantools", "Rcpp", "RcppEigen",
+                                   unlist(lock$Packages$rstan$Requirements, use.names = FALSE)))
           renv::restore(library = Sys.getenv("R_LIBS_USER"),
-                        packages = c("rstan", "StanHeaders", "rstantools", "Rcpp", "RcppEigen"),
+                        packages = intersect(dependencies, names(lock$Packages)),
                         prompt = FALSE)
+          # Build rstan against the locked RcppParallel/StanHeaders ABI. A Linux
+          # repository binary can target a different TBB runtime despite equal R package versions.
+          repositories <- unlist(lock$R$Repositories, use.names = TRUE)
+          options(renv.config.ppm.enabled = FALSE, renv.config.install.shortcuts = FALSE)
+          renv::install(paste0("rstan@", lock$Packages$rstan$Version),
+                        library = Sys.getenv("R_LIBS_USER"), repos = repositories,
+                        type = "source", rebuild = TRUE, dependencies = FALSE, prompt = FALSE)
       - name: Check generated code before installation can regenerate it
         run: Rscript --vanilla tools/update-stan.R --check
       - name: Exercise stale-file and invalid-source checks

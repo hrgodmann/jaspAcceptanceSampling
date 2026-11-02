@@ -11,7 +11,7 @@
 test_that("valid predictive draws retain their exact empirical weights and finite-lot support", {
   api <- .ssm_predictive_api()
   pmf <- api$pmf(c(4, 5, 5, 6), sT = 1000, nT = 998, yT = 4)
-  expect_equal(pmf$defects, 0:1000)
+  expect_equal(pmf$defects, 4:6)
   expect_equal(pmf$prob[pmf$defects %in% 4:6], c(0.25, 0.5, 0.25))
   expect_equal(sum(pmf$prob[pmf$defects < 4 | pmf$defects > 6]), 0)
   expect_equal(sum(pmf$prob), 1)

@@ -32,7 +32,8 @@
     "BH": {
       "Package": "BH",
       "Version": "1.90.0-1",
-      "Source": "Repository"
+      "Source": "Repository",
+      "Requirements": []
     },
     "BayesFactor": {
       "Package": "BayesFactor",
@@ -93,6 +94,13 @@
         "stats"
       ]
     },
+    "QuickJSR": {
+      "Package": "QuickJSR",
+      "Version": "1.11.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": []
+    },
     "R6": {
       "Package": "R6",
       "Version": "2.6.1",
@@ -133,7 +141,10 @@
     "RcppParallel": {
       "Package": "RcppParallel",
       "Version": "5.1.11-1",
-      "Source": "Repository"
+      "Source": "Repository",
+      "Requirements": [
+        "R"
+      ]
     },
     "S7": {
       "Package": "S7",
@@ -159,7 +170,12 @@
     "StanHeaders": {
       "Package": "StanHeaders",
       "Version": "2.32.10",
-      "Source": "Repository"
+      "Source": "Repository",
+      "Requirements": [
+        "R",
+        "RcppEigen",
+        "RcppParallel"
+      ]
     },
     "TTR": {
       "Package": "TTR",
@@ -169,6 +185,17 @@
         "curl",
         "xts",
         "zoo"
+      ]
+    },
+    "abind": {
+      "Package": "abind",
+      "Version": "1.4-8",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "methods",
+        "R",
+        "utils"
       ]
     },
     "abtest": {
@@ -195,6 +222,15 @@
       "Source": "Repository",
       "Requirements": [
         "sys"
+      ]
+    },
+    "backports": {
+      "Package": "backports",
+      "Version": "1.5.1",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "R"
       ]
     },
     "base64enc": {
@@ -250,6 +286,17 @@
         "processx",
         "R",
         "R6",
+        "utils"
+      ]
+    },
+    "checkmate": {
+      "Package": "checkmate",
+      "Version": "2.3.4",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "backports",
+        "R",
         "utils"
       ]
     },
@@ -386,6 +433,23 @@
       "Requirements": [
         "R",
         "utils"
+      ]
+    },
+    "distributional": {
+      "Package": "distributional",
+      "Version": "0.9.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "generics",
+        "lifecycle",
+        "numDeriv",
+        "pillar",
+        "R",
+        "rlang",
+        "stats",
+        "utils",
+        "vctrs"
       ]
     },
     "doParallel": {
@@ -694,6 +758,15 @@
         "R"
       ]
     },
+    "inline": {
+      "Package": "inline",
+      "Version": "0.3.21",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "methods"
+      ]
+    },
     "isoband": {
       "Package": "isoband",
       "Version": "0.3.0",
@@ -862,10 +935,33 @@
         "zoo"
       ]
     },
+    "loo": {
+      "Package": "loo",
+      "Version": "2.10.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "checkmate",
+        "matrixStats",
+        "parallel",
+        "posterior",
+        "R",
+        "stats"
+      ]
+    },
     "magrittr": {
       "Package": "magrittr",
       "Version": "2.0.4",
       "Source": "Repository",
+      "Requirements": [
+        "R"
+      ]
+    },
+    "matrixStats": {
+      "Package": "matrixStats",
+      "Version": "1.5.0",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
       "Requirements": [
         "R"
       ]
@@ -1080,6 +1176,27 @@
         "Rcpp"
       ]
     },
+    "posterior": {
+      "Package": "posterior",
+      "Version": "1.7.0",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "abind",
+        "checkmate",
+        "distributional",
+        "matrixStats",
+        "methods",
+        "parallel",
+        "pillar",
+        "R",
+        "rlang",
+        "stats",
+        "tensorA",
+        "tibble",
+        "vctrs"
+      ]
+    },
     "processx": {
       "Package": "processx",
       "Version": "3.8.6",
@@ -1266,12 +1383,35 @@
     "rstan": {
       "Package": "rstan",
       "Version": "2.32.7",
-      "Source": "Repository"
+      "Source": "Repository",
+      "Requirements": [
+        "BH",
+        "ggplot2",
+        "gridExtra",
+        "inline",
+        "loo",
+        "methods",
+        "pkgbuild",
+        "QuickJSR",
+        "R",
+        "Rcpp",
+        "RcppEigen",
+        "RcppParallel",
+        "StanHeaders",
+        "stats4"
+      ]
     },
     "rstantools": {
       "Package": "rstantools",
       "Version": "2.5.0",
-      "Source": "Repository"
+      "Source": "Repository",
+      "Requirements": [
+        "desc",
+        "Rcpp",
+        "RcppParallel",
+        "stats",
+        "utils"
+      ]
     },
     "rvg": {
       "Package": "rvg",
@@ -1445,6 +1585,16 @@
         "R",
         "tools",
         "utils"
+      ]
+    },
+    "tensorA": {
+      "Package": "tensorA",
+      "Version": "0.36.2.1",
+      "Source": "Repository",
+      "Repository": "https://packagemanager.posit.co/cran/2026-04-22",
+      "Requirements": [
+        "R",
+        "stats"
       ]
     },
     "textshaping": {

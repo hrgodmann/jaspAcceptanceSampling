@@ -13,15 +13,20 @@ data {
 transformed data {
   real jump_probability = 0.05;
   real jump_extra_sd = 1.5;
+  if (prior_theta1_a <= 0 || prior_theta1_b <= 0 ||
+      is_inf(prior_theta1_a) || is_inf(prior_theta1_b) ||
+      is_nan(prior_theta1_a) || is_nan(prior_theta1_b))
+    reject("Initial Beta prior shapes must be finite and strictly positive");
   for (t in 1:T)
     if (y[t] > n[t] || n[t] > s[t]) reject("Require y <= n <= s");
 }
 parameters {
-  real<lower=0, upper=1> theta1;
+  real mu1; // initial baseline log odds
   real<lower=0> sigma_eta;
   vector[T-1] z_raw;
 }
 transformed parameters {
+  real<lower=0, upper=1> theta1 = inv_logit(mu1);
   vector[T-1] eta;
   vector[T] mu;
   vector[T] theta;
@@ -30,15 +35,23 @@ transformed parameters {
     for (t in 1:(T-1))
       eta[t] = normal_mixture_transport(z_raw[t], sigma_eta,
                                         jump_probability, jump_extra_sd);
-  mu[1] = logit(theta1);
+  mu[1] = mu1;
   if (T > 1) mu[2:T] = mu[1] + cumulative_sum(eta);
   theta = inv_logit(mu);
 }
 model {
-  theta1 ~ beta(prior_theta1_a, prior_theta1_b);
+  // Beta prior on inv_logit(mu1), including its transformation Jacobian.
+  // Combining the log terms avoids rounding theta1 to 0/1 inside the target.
+  // The Beta normalizing constant depends only on the supplied prior shapes.
+  target += prior_theta1_a * log_inv_logit(mu1)
+            + prior_theta1_b * log1m_inv_logit(mu1);
   sigma_eta ~ normal(0, prior_sigma_sd);
   z_raw ~ std_normal();
-  y ~ binomial_logit(n, mu);
+  // Binomial log likelihood, omitting only the data-dependent coefficients.
+  // Stable log probabilities also cover logits whose inverse rounds to 0/1.
+  for (t in 1:T)
+    target += y[t] * log_inv_logit(mu[t])
+              + (n[t] - y[t]) * log1m_inv_logit(mu[t]);
 }
 generated quantities {
   int y_pred = y[T] + binomial_rng(s[T] - n[T], theta[T]);

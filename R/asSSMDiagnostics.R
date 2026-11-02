@@ -4,7 +4,7 @@
   n <- dim(draws)[1L]
   chains <- dim(draws)[2L]
   names <- dimnames(draws)[[3L]]
-  sampled <- grep("^(theta1|sigma_eta|beta_predictor(\\[[0-9]+\\])?|z_raw\\[[0-9]+\\])$", names)
+  sampled <- grep("^(mu1|sigma_eta|beta_predictor(\\[[0-9]+\\])?|z_raw\\[[0-9]+\\])$", names)
   if (!length(sampled)) stop("No sampled parameters found for diagnostics.")
 
   parameters <- data.frame(parameter = names[sampled], rhat = NA_real_,
@@ -47,7 +47,7 @@
 }
 
 .asSSM_extractDiagnostics <- function(stanFit, lots, predictor, maxTreedepth, thin, expectedChains) {
-  pars <- c("theta1", "sigma_eta", if (lots > 1L) "z_raw",
+  pars <- c("mu1", "sigma_eta", if (lots > 1L) "z_raw",
             if (predictor) "beta_predictor")
   samplerParams <- rstan::get_sampler_params(stanFit, inc_warmup = FALSE)
   tryCatch({

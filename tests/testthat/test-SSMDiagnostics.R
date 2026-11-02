@@ -8,12 +8,11 @@
 
 .ssm_diagnostic_fixture <- function(n = 2000L, chains = 4L, betaNames = "beta_predictor") {
   set.seed(42)
-  variables <- c("theta1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames,
+  variables <- c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames,
                  "theta[1]", "y_pred", "jump_responsibility[1]")
   draws <- array(rnorm(n * chains * length(variables)),
                  dim = c(n, chains, length(variables)),
                  dimnames = list(NULL, paste0("chain:", seq_len(chains)), variables))
-  draws[, , "theta1"] <- plogis(draws[, , "theta1"])
   draws[, , "sigma_eta"] <- exp(draws[, , "sigma_eta"])
   # Constant generated quantities must not become sampled-parameter warnings.
   draws[, , "theta[1]"] <- 0
@@ -29,7 +28,7 @@ test_that("healthy ordered draws match RStan diagnostics without checking genera
   input <- .ssm_diagnostic_fixture()
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
   expect_identical(d$parameters$parameter,
-                   c("theta1", "sigma_eta", "z_raw[1]", "z_raw[2]", "beta_predictor"))
+                   c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", "beta_predictor"))
   for (i in seq_len(nrow(d$parameters))) {
     x <- input$draws[, , d$parameters$parameter[i]]
     expect_equal(d$parameters$rhat[i], rstan::Rhat(x), tolerance = 1e-12)
@@ -87,7 +86,7 @@ test_that("indexed coefficients include both singleton and multivariate predicto
     input <- .ssm_diagnostic_fixture(betaNames = betaNames)
     d <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
     expect_identical(d$parameters$parameter,
-                     c("theta1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames))
+                     c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames))
     for (name in betaNames) {
       parameter <- d$parameters[d$parameters$parameter == name, ]
       x <- input$draws[, , name]
@@ -126,7 +125,7 @@ test_that("constant and nonfinite sampled parameters are unavailable rather than
   expect_true(beta$nonfinite_draws)
   expect_true(all(is.na(z[c("rhat", "ess_bulk", "ess_tail")])))
   expect_true(all(is.na(beta[c("rhat", "ess_bulk", "ess_tail")])))
-  expect_true(all(is.finite(d$parameters$rhat[d$parameters$parameter == "theta1"])))
+  expect_true(all(is.finite(d$parameters$rhat[d$parameters$parameter == "mu1"])))
   messages <- paste(api$messages(d), collapse = " ")
   expect_match(messages, "constant.*z_raw\\[1\\]")
   expect_match(messages, "Non-finite draws")
@@ -339,4 +338,18 @@ test_that("warnings clear after a healthy fit and stale reports clear without a 
   fixture$results[["fit"]] <- NULL
   fixture$report(fixture$results, list(ssm_printDiagnostics = TRUE))
   expect_null(fixture$results[["samplerDiagnostics"]])
+})
+
+test_that("rounded initial probabilities do not mask mixing of their sampled log odds", {
+  api <- .ssm_diagnostic_api()
+  input <- .ssm_diagnostic_fixture()
+  input$draws[, , "mu1"] <- input$draws[, , "mu1"] + 1000
+  # Probability-scale output rounds to one, while sampled log odds still vary.
+  expect_true(all(plogis(input$draws[, , "mu1"]) == 1))
+  d <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
+  first <- d$parameters[d$parameters$parameter == "mu1", ]
+  expect_false(first$constant_chain)
+  expect_true(is.finite(first$rhat))
+  expect_true(is.finite(first$ess_bulk))
+  expect_true(is.finite(first$ess_tail))
 })

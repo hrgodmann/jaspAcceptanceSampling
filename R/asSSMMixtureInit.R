@@ -17,7 +17,7 @@
     z_raw <- sign(eta) * stats::qnorm(log_tail, lower.tail = FALSE, log.p = TRUE)
 
     initial <- list(
-      theta1 = theta1,
+      mu1 = stats::qlogis(theta1),
       sigma_eta = sigma,
       z_raw = array(as.numeric(z_raw), dim = length(z_raw))
     )

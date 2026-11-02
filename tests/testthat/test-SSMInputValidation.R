@@ -139,15 +139,12 @@ test_that("one lot is supported only without a predictor and the predictor must 
   expect_null(validate(single, .ssm_input_options(FALSE)))
   expect_match(validate(single, .ssm_input_options(TRUE)),
                "two|multiple|more than one", ignore.case = TRUE)
-  cutoff <- sqrt(.Machine$double.eps)
-  for (values in list(rep(5, 3), c(0, 1e-10, 2e-10), c(-cutoff, 0, cutoff))) {
+  for (values in list(rep(5, 3), rep(1e-150, 3), rep(0, 3))) {
     data <- .ssm_input_data()
     data$x <- values
     expect_match(validate(data, .ssm_input_options(TRUE)),
                  "vary|variation|constant|standard deviation", ignore.case = TRUE)
   }
-  data$x <- c(-2 * cutoff, 0, 2 * cutoff)
-  expect_null(validate(data, .ssm_input_options(TRUE)))
 })
 
 
@@ -168,4 +165,32 @@ test_that("predictor assignment alone governs readiness and validation", {
   expect_match(validate(data, options), "vary|variation|constant", ignore.case = TRUE)
   options$ssm_count <- ""
   expect_false(ready(options, data))
+})
+
+
+test_that("predictor validation and standardization are invariant to representable unit changes", {
+  validate <- getFromNamespace(".asSSM_validateInputs", "jaspAcceptanceSampling")
+  design <- getFromNamespace(".asSSM_predictorDesign", "jaspAcceptanceSampling")
+  options <- .ssm_input_options(TRUE)
+  data <- .ssm_input_data()
+  data$x <- c(-1, 0, 1)
+  expected <- design(data, options)$X
+  for (unit in c(1e-150, 1e-10, sqrt(.Machine$double.eps), 1, 1e10, 1e150)) {
+    changed <- data
+    changed$x <- unit * data$x
+    expect_null(validate(changed, options))
+    expect_equal(design(changed, options)$X, expected, tolerance = 1e-12)
+    changed$x <- changed$x + 10 * unit
+    expect_null(validate(changed, options))
+    expect_equal(design(changed, options)$X, expected, tolerance = 1e-12)
+  }
+})
+
+test_that("unstandardizable finite covariates request rescaling instead of claiming no variation", {
+  validate <- getFromNamespace(".asSSM_validateInputs", "jaspAcceptanceSampling")
+  data <- .ssm_input_data()
+  for (values in list(c(-1e154, 0, 1e154), c(-1e-200, 0, 1e-200))) {
+    data$x <- values
+    expect_match(validate(data, .ssm_input_options(TRUE)), "Rescale|rescale")
+  }
 })
