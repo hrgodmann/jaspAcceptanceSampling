@@ -1,0 +1,57 @@
+{
+  "mpmath": "1.3.0",
+  "decimal_precision": 65,
+  "calibration_rows": 15,
+  "pmf_rows": 3610,
+  "calibration_residuals": [
+    {
+      "case": "default",
+      "max_cdf_residual": "4.11560416497e-46",
+      "aql_double_delta": "2.77555756156e-18",
+      "rql_double_delta": "-5.55111512313e-18"
+    },
+    {
+      "case": "narrow",
+      "max_cdf_residual": "2.03745584063e-59",
+      "aql_double_delta": "2.77555756156e-18",
+      "rql_double_delta": "2.77555756156e-19"
+    },
+    {
+      "case": "u_shaped",
+      "max_cdf_residual": "0.0",
+      "aql_double_delta": "5.55111512313e-18",
+      "rql_double_delta": "2.22044604925e-17"
+    },
+    {
+      "case": "endpoint",
+      "max_cdf_residual": "3.61959173009e-63",
+      "aql_double_delta": "-4.52518881741e-23",
+      "rql_double_delta": "-9.05037763482e-23"
+    },
+    {
+      "case": "central_left",
+      "max_cdf_residual": "2.23170861213e-47",
+      "aql_double_delta": "2.6755486715e-17",
+      "rql_double_delta": "0.0"
+    },
+    {
+      "case": "central_right",
+      "max_cdf_residual": "1.01564110094e-47",
+      "aql_double_delta": "0.0",
+      "rql_double_delta": "2.87556645162e-17"
+    }
+  ],
+  "input_contract": "Calibration targets are exact decimal strings or analytic quantiles; R tests round inputs and references to nearest double. Recorded deltas quantify decimal-versus-double targets.",
+  "generator": "generate.py retained outside source in the owning validation evidence directory",
+  "huge_cdf_method": "Standardized log-density quadrature truncated at -14 SD; tangent bound below 1e-43 for supplied huge shapes.",
+  "generator_sha256": "6337e8d2f3f3da9246f018e1dfa89434affc30fdcc52288abd696ded378dfc4e",
+  "bf_rows": 7,
+  "stored_pmf_max_mass_residual": "2.6064656822735467878e-36",
+  "analytic_shape_quantiles": "Exact formulas for alpha=1, beta=1 and arcsine; other quantiles use 180 bisections at65-digit precision. Printed45-digit quantiles have error well below double precision.",
+  "fixture_methods": {
+    "bayesian-three-region-priors.csv": "See method column and calibration_residuals",
+    "bayesian-three-region-pmf.csv": "65-digit log-gamma beta-binomial PMF; independently computed for eachcount; no adjacent-count recurrence",
+    "bayesian-three-region-bf.csv": "65-digit prior/posterior region integrals; standardized quadrature for hugecentralshapes, regularized incompletebeta otherwise"
+  },
+  "formatting_note": "CSV line endings normalized to LF; generator explicitly emits LF. Numeric contents unchanged."
+}

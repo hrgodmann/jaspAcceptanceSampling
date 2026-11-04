@@ -16,7 +16,13 @@
 
 # jaspAcceptanceSampling (development version)
 
+## Added
+* The two-region impartial prior in Bayesian Sampling has an explicit Unimodal or U-shaped choice. The location specifies a peak or an interior minimum respectively; both shapes retain the 50/50 probability split at RQL.
+* Bayesian Sampling reports the acceptance number for the observed sample size and selected Bayes-factor target, shows the planning prior parameters, and provides more informative explanations when no sampling plan meets the target.
+
 ## Changed
+* Bayesian Sampling describes evidence for quality below versus at or above the RQL separately from whether the selected Bayes-factor target was reached, including exact target equality and targets at or below one.
+* Bayesian Sampling consistently describes counted items as defectives and their rate as the proportion defective.
 * Bayesian State-Space Sampling accepts multiple numeric covariates with additive effects, separate standardization and independent coefficient priors using one adjustable Cauchy scale. Coefficient outputs identify each covariate, and redundant covariates are rejected.
 * Clarified state-space prior and decision-threshold labels and expanded the help with model equations, predictor interpretation, strict decision rules, smoothing/refitting behavior and predictive plot limits. These wording and help changes do not alter calculations.
 * Bayesian State-Space Sampling now uses a two-component innovation mixture instead of the Gaussian state model and post-hoc predictive correction supplied in the earlier beta. Recalculating saved beta analyses fits the new model, so results may differ. Applicable data assignments, priors, MCMC settings and decision thresholds are preserved; the removed correction settings are no longer used.
@@ -25,6 +31,16 @@
 * State-space model selection now follows the covariate assignments. A saved beta analysis with a retained covariate assignment uses that covariate on recalculation, even if its old model selector was set to exclude predictors. Clear the assignment to fit the model without covariates.
 
 ## Fixed
+* State-space computational diagnostics appear after all plots, including predictor coefficients, and before the MCMC diagnostics table. Warning-only reports remain above the results.
+* Bayesian Sampling retains entered defect and lot counts when they conflict with the sample size, showing an explanatory analysis error instead of rejecting the entry through a dependent input-field limit. Correcting either count restores inference results.
+* Bayesian Sampling displays inference input errors on the first run, clears dependent results when inputs are invalid, and recovers when they are corrected. Replacing an errored results container now preserves the correct object type and dependencies.
+* Bayesian Sampling density plots use separate adaptive grids for each prior and posterior, resolving narrow peaks and both endpoint tails. Unbounded tails remain in the curve data when the vertical display range is limited.
+* Predictive beta-binomial probabilities use adjacent-count ratios to retain accuracy for highly concentrated priors, avoiding cancellation in differences of large log-Beta values.
+* Three-region impartial priors now match the requested equal probability split directly and verify all three region masses. Removed the parameter penalty and fixed search limits that could distort the prior. Incompatible shape constraints and numerical calibration failures produce explicit errors.
+* Two-region impartial-prior calibration enforces the selected shape and checks the achieved location and probability split. Incompatible or non-unique requests show actionable errors instead of returning a minimum labelled as a mode or an unidentified uniform prior. The solver searches adaptively rather than excluding valid priors above a fixed parameter limit.
+* Bayesian Sampling calculates two- and three-region Bayes factors on the log scale without probability clipping, including extreme tails and narrow middle regions. Plans, acceptance numbers and evidence labels use the same log-scale comparisons with a small floating-point tie allowance; extreme Bayes factors are displayed in scientific notation.
+* Bayesian Sampling prior plots remain available when no sampling plan meets the requested target. Fully inspected lots retain a labelled predictive count tick, and quality thresholds retain meaningful digits in tables and explanatory text.
+* Bayesian Sampling corrects floating-point noise at whole-count quality limits, keeping predictive region probabilities, table labels, summaries and plot thresholds consistent at exact AQL/RQL boundaries.
 * State-space Lot Number accepts numeric Ordinal labels as well as Scale data, preserving numeric lot values and ordering instead of rejecting valid Ordinal input. Clarified that missing values in assigned columns stop the analysis without dropping or imputing lots.
 * Pinned the complete Stan toolchain dependency set and added a pre-restore CI check for missing pins. The existing generator versions reproduce the checked-in model headers. The Linux generation job builds the pinned RStan version from source against its locked dependencies to avoid incompatible TBB binaries.
 * Strict state-space quality limits correct floating-point noise near whole defect counts. Decision probabilities are tallied directly from predictive draws so exact equality to a decision threshold remains equality.

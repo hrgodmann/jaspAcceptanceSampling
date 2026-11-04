@@ -856,7 +856,6 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
       .asSSM_fitDependencies(),
       "ssm_showMcmcSummary", "ssm_showTheta", "ssm_showSigma", "ssm_showYpred", "ssm_showBeta"
     ))
-    table$position <- 5   # after the other tables/plots
     table$addColumnInfo(name = "parameter", title = gettext("Parameter"), type = "string")
     table$addColumnInfo(name = "mean",      title = gettext("Mean"),      type = "number")
     table$addColumnInfo(name = "sd",        title = gettext("SD"),        type = "number")
@@ -866,6 +865,9 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
     jaspResults[["mcmcSummary"]] <- table
   }
+
+  # Also update reused tables from analyses saved with the previous ordering.
+  table$position <- 6  # after the full computational diagnostics report
 
   table$setData(list(
     parameter = character(0),

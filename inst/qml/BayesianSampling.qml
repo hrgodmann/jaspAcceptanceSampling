@@ -64,14 +64,27 @@ Form
 				label: qsTr("Impartial (Around the RQL)")
 				checked: true
 
+				DropDown {
+					id: impartialShape
+					name: "impartialShapeplan"
+					label: qsTr("Shape")
+					info: qsTr("Both shapes assign half of the prior probability below RQL. The location is a peak for Unimodal and an interior minimum for U-shaped.")
+					indexDefaultValue: 0
+					values: [
+						{ label: qsTr("Unimodal"), value: "unimodal" },
+						{ label: qsTr("U-shaped"), value: "u_shaped" }
+					]
+				}
+
 				CheckBox {
 					name: "impartialCustomModeplan"
-					label: qsTr("Custom prior mode")
+					label: impartialShape.value === "u_shaped" ? qsTr("Custom prior minimum") : qsTr("Custom prior mode")
+					info: qsTr("When unchecked, AQL is used as the location. Changing shape retains the location; incompatible combinations show an error.")
 					checked: false
 
 					DoubleField {
 						name: "impartialModeplan"
-						label: qsTr("Mode")
+						label: impartialShape.value === "u_shaped" ? qsTr("Minimum") : qsTr("Mode")
 						defaultValue: 0.05
 						min: 0
 						max: 1
@@ -111,6 +124,7 @@ Form
 			RadioButton {
 				value: "impartial_three"
 				label: qsTr("Impartial (Three-region)")
+				info: qsTr("Assigns one third of the prior probability below AQL, one third between AQL and RQL, and one third above RQL.")
 			}
 		}
 
@@ -123,6 +137,7 @@ Form
 			{
 				name: "impartialThreeConstraintplan"
 				label: qsTr("Shape constraint")
+				info: qsTr("The equal-thirds prior must satisfy this constraint. Incompatible quality limits and shape constraints produce an error; the probability split is not changed.")
 				indexDefaultValue: 0
 
 				values: [
@@ -195,10 +210,11 @@ Form
 
 				IntegerField {
 					name: "data_dinfer"
-					label: qsTr("Observed number of defects (d)")
+					label: qsTr("Observed number of defectives (d)")
 					defaultValue: 0
 					min: 0
-					max: parseInt(data_n.value)
+					// Let the analysis explain d > n without rejecting the entered count.
+					max: 100000
 				}
 
 				IntegerField {
@@ -206,7 +222,8 @@ Form
 					name: "lot_sizeinfer"
 					label: qsTr("Lot size (N)")
 					defaultValue: 100
-					min: parseInt(data_n.value)
+					// Validate N >= n in the analysis; either input may need correction.
+					min: 1
 					max: 100000
 				}
 			}

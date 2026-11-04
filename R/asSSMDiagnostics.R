@@ -148,6 +148,7 @@
   jaspResults[["samplerDiagnostics"]] <- createJaspHtml(
     text = .asSSM_diagnosticHtml(diagnostics, details = printDiagnostics), elementType = "div",
     title = if (printDiagnostics) gettext("Computational Diagnostics") else gettext("Sampling Warnings"),
-    position = if (printDiagnostics) 4.5 else -0.5,
+    # Result positions are integers; keep the full report after coefficient plots.
+    position = if (printDiagnostics) 5 else -1,
     dependencies = c(.asSSM_fitDependencies(), "ssm_printDiagnostics"))
 }

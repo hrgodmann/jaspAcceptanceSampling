@@ -1,0 +1,6 @@
+{
+  "mpmath": "1.3.0",
+  "precision_decimal_digits": 85,
+  "method": "Independent two-dimensional high-precision root solve of incomplete-beta CDF(r)=1/2 and (1-m)*(alpha-1)-m*(beta-1)=0. Double-precision prototype results supply only starting guesses. No production solver evaluations are used. Four additional known-shape cases use high-precision median bisection directly from the specified shapes.",
+  "input_representation": "IEEE754 binary64 input values promoted exactly to arbitrary precision."
+}

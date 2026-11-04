@@ -50,18 +50,19 @@ test_that("Bayesian sampling - inference decision table is generated", {
 
   inf_table <- results[["results"]][["infContainer"]][["collection"]][["infContainer_inferenceDecisionTable"]][["data"]]
 
-  expect_equal(length(inf_table), 8)
+  expect_equal(length(inf_table), 9)
   jaspTools::expect_equal_tables(inf_table[[1]], list("Sample Size (n)", "30"))
-  jaspTools::expect_equal_tables(inf_table[[2]], list("Defects (d)", "0"))
-  expect_equal(inf_table[[3]]$col_1, "AQL")
-  expect_equal(as.numeric(inf_table[[3]]$col_2), 0.05)
-  expect_equal(inf_table[[4]]$col_1, "RQL")
-  expect_equal(as.numeric(inf_table[[4]]$col_2), 0.15)
-  expect_equal(inf_table[[5]]$col_1, "Bayes Factor")
-  expect_equal(as.numeric(inf_table[[5]]$col_2), 188.832, tolerance = 1e-6)
-  expect_equal(as.numeric(inf_table[[6]]$col_2), 0.889, tolerance = 1e-6)
-  expect_equal(as.numeric(inf_table[[7]]$col_2), 0.110, tolerance = 1e-6)
-  expect_equal(as.numeric(inf_table[[8]]$col_2), 0.001, tolerance = 1e-6)
+  jaspTools::expect_equal_tables(inf_table[[2]], list("Defectives (d)", "0"))
+  jaspTools::expect_equal_tables(inf_table[[3]], list("Acceptance number (c)", "1"))
+  expect_equal(inf_table[[4]]$col_1, "AQL")
+  expect_equal(as.numeric(inf_table[[4]]$col_2), 0.05)
+  expect_equal(inf_table[[5]]$col_1, "RQL")
+  expect_equal(as.numeric(inf_table[[5]]$col_2), 0.15)
+  expect_equal(inf_table[[6]]$col_1, "Bayes Factor")
+  expect_equal(as.numeric(inf_table[[6]]$col_2), 188.832, tolerance = 1e-6)
+  expect_equal(as.numeric(inf_table[[7]]$col_2), 0.889, tolerance = 1e-6)
+  expect_equal(as.numeric(inf_table[[8]]$col_2), 0.110, tolerance = 1e-6)
+  expect_equal(as.numeric(inf_table[[9]]$col_2), 0.001, tolerance = 1e-6)
 })
 
 test_that("Bayesian sampling - invalid impartial prior fails gracefully", {
