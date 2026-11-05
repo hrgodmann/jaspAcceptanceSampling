@@ -4,6 +4,16 @@
 # This file is kept separate from a future generated R/stanmodels.R so the
 # package can adopt the standard rstantools layout without name conflicts.
 
+.asSSM_cppModuleFactory <- function(module_name, class_name) {
+  # Socket workers must initialize their own Rcpp class. Capture only its names.
+  force(module_name)
+  force(class_name)
+  function(x) {
+    module <- Rcpp::Module(module_name, PACKAGE = "jaspAcceptanceSampling", mustStart = TRUE)
+    eval(substitute(M$X, list(M = module, X = as.name(class_name))))
+  }
+}
+
 .asSSM_getStanModel <- local({
   cache <- new.env(parent = emptyenv())
   .stanFile <- function(model_name) {
@@ -82,7 +92,7 @@
       model_name = stanfit$model_name,
       model_code = stanfit$model_code,
       model_cpp = stanfit$model_cpp,
-      mk_cppmodule = function(x) module_class
+      mk_cppmodule = .asSSM_cppModuleFactory(module_name, class_name)
     )
   }
 
