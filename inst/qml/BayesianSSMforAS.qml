@@ -103,10 +103,10 @@ Form
 		}
 	}
 
-	Section
+	Group
 	{
-		title: qsTr("Settings")
 		columns: 1
+		rowSpacing: jaspTheme.rowGridSpacing
 		info: qsTr("AQL and RQL are defect **proportions**, entered between 0 and 1. For example, an AQL of 0.025 " +
 			"corresponds to 25 defects in a lot of size 1,000. Let %1 be the total number of defects in the " +
 			"current lot, %2 its size, and %3 all supplied observations. The decision uses the posterior " +
