@@ -31,6 +31,7 @@
 * State-space model selection now follows the covariate assignments. A saved beta analysis with a retained covariate assignment uses that covariate on recalculation, even if its old model selector was set to exclude predictors. Clear the assignment to fit the model without covariates.
 
 ## Fixed
+* Updated module tests for the native jaspTools input pipeline and GUI input bounds, retaining numerical reference and error-recovery coverage. Isolated the Stan-generation job's targeted rstan install from unrelated module Remotes; the shared JASP unit-test workflow is unchanged.
 * State-space computational diagnostics appear after all plots, including predictor coefficients, and before the MCMC diagnostics table. Warning-only reports remain above the results.
 * Bayesian Sampling retains entered defect and lot counts when they conflict with the sample size, showing an explanatory analysis error instead of rejecting the entry through a dependent input-field limit. Correcting either count restores inference results.
 * Bayesian Sampling displays inference input errors on the first run, clears dependent results when inputs are invalid, and recovers when they are corrected. Replacing an errored results container now preserves the correct object type and dependencies.

@@ -52,13 +52,21 @@
   observed
 }
 
-test_that("Bayesian sampling - fresh invalid data, lot sizes, and BF targets show visible errors", {
+test_that("Bayesian sampling - invalid counts and BF targets are rejected by the QML input bounds", {
+  cases <- c(data_ninfer = -1, data_dinfer = -1, min_bfplan = 0)
+  for (option in names(cases)) {
+    options <- .bsInputErrorOptionsForTest()
+    options[[option]] <- unname(cases[[option]])
+    expect_error(
+      jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
+      paste0(option, ": The value must be"), fixed = TRUE)
+  }
+})
+
+test_that("Bayesian sampling - inconsistent data and lot sizes show visible errors", {
   cases <- list(
-    list(change = list(data_ninfer = -1), message = "n >= 0 and 0 <= d <= n"),
-    list(change = list(data_dinfer = -1), message = "n >= 0 and 0 <= d <= n"),
     list(change = list(data_dinfer = 31), message = "The observed number of defectives (d) cannot exceed the sample size (n)"),
-    list(change = list(lot_sizeinfer = 29), message = "Lot size (N) must be at least"),
-    list(change = list(min_bfplan = 0), message = "minimum Bayes factor (> 0)"))
+    list(change = list(lot_sizeinfer = 29), message = "Lot size (N) must be at least"))
   for (case in cases) {
     options <- .bsInputErrorOptionsForTest()
     options[names(case$change)] <- case$change

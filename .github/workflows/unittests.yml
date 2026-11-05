@@ -13,6 +13,7 @@ jobs:
   stan-generated:
     runs-on: ubuntu-latest
     env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       RENV_CONFIG_AUTOLOADER_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +39,8 @@ jobs:
           # repository binary can target a different TBB runtime despite equal R package versions.
           repositories <- unlist(lock$R$Repositories, use.names = TRUE)
           options(renv.config.ppm.enabled = FALSE, renv.config.install.shortcuts = FALSE)
-          renv::install(paste0("rstan@", lock$Packages$rstan$Version),
+          # This targeted install does not need the module's unrelated GitHub Remotes.
+          renv::install(paste0("rstan@", lock$Packages$rstan$Version), project = tempdir(),
                         library = Sys.getenv("R_LIBS_USER"), repos = repositories,
                         type = "source", rebuild = TRUE, dependencies = FALSE, prompt = FALSE)
       - name: Check generated code before installation can regenerate it

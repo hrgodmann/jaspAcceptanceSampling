@@ -177,7 +177,7 @@ test_that("Analyze attribute plan multiple - plan table match", {
   r <- c(2,4)
   stages <- list()
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   options$pd_lowerMult <- 0
@@ -185,7 +185,6 @@ test_that("Analyze attribute plan multiple - plan table match", {
   options$pd_stepMult <- 0.05
   options$distributionMult <- "binom"
   
-  options$sampleSizeSingle <- 0 # To avoid single plan calculations
   options$assessPlanMult <- FALSE
   options$showSummaryMult <- FALSE
   options$showOCCurveMult <- FALSE
@@ -204,7 +203,7 @@ test_that("Analyze attribute plan multiple - plan table match", {
   c <- c(0,1,2,3,4,6)
   r <- c(3,3,4,5,6,7)
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
@@ -225,7 +224,7 @@ test_that("Analyze attribute plan Mult - assess table match", {
   r <- c(3,3,4,5,6,7)
   stages <- list()
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   options$pd_lowerMult <- 0
@@ -233,7 +232,6 @@ test_that("Analyze attribute plan Mult - assess table match", {
   options$pd_stepMult <- 0.02
   options$distributionMult <- "binom"
   
-  options$sampleSizeSingle <- 0 # To avoid single plan calculations
   options$showSummaryMult <- FALSE
   options$showOCCurveMult <- FALSE
   options$showAOQCurveMult <- FALSE
@@ -267,7 +265,7 @@ test_that("Analyze attribute plan Mult - AOQ Curve match", {
   r <- c(2,5,7)
   stages <- list()
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   options$pd_lowerMult <- 0.08
@@ -276,7 +274,6 @@ test_that("Analyze attribute plan Mult - AOQ Curve match", {
   
   options$showAOQCurveMult <- TRUE
 
-  options$sampleSizeSingle <- 0 # To avoid single plan calculations
   options$assessPlanMult <- FALSE
   options$showSummaryMult <- FALSE
   options$showOCCurveMult <- FALSE
@@ -321,7 +318,7 @@ test_that("Analyze attribute plan Mult - ATI Curve match", {
   r <- c(2,5,8,10)
   stages <- list()
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   options$pd_lowerMult <- 0.10
@@ -330,7 +327,6 @@ test_that("Analyze attribute plan Mult - ATI Curve match", {
   
   options$showATICurveMult <- TRUE
 
-  options$sampleSizeSingle <- 0 # To avoid single plan calculations
   options$assessPlanMult <- FALSE
   options$showSummaryMult <- FALSE
   options$showOCCurveMult <- FALSE
@@ -375,7 +371,7 @@ test_that("Analyze attribute plan Mult - ASN Curve match", {
   r <- c(2,5,8,11,14,17,19)
   stages <- list()
   for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=i)
+    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
   }
   options$stages <- stages
   options$pd_lowerMult <- 0.005
@@ -384,7 +380,6 @@ test_that("Analyze attribute plan Mult - ASN Curve match", {
   
   options$showASNCurveMult <- TRUE
   
-  options$sampleSizeSingle <- 0 # To avoid single plan calculations
   options$assessPlanMult <- FALSE
   options$showSummaryMult <- FALSE
   options$showOCCurveMult <- FALSE

@@ -19,10 +19,9 @@ test_that("BayesianSampling runs without error", {
   opts <- jaspTools::analysisOptions(jaspFile)
   dataset <- jaspTools::extractDatasetFromJASPFile(jaspFile)
 
-  # Encode and run analysis
-  encoded <- jaspTools:::encodeOptionsAndDataset(opts, dataset)
+  # Let the public runner encode the data and options.
   set.seed(1)
-  results <- jaspTools::runAnalysis("BayesianSampling", encoded$dataset, encoded$options, encodedDataset = TRUE)
+  results <- jaspTools::runAnalysis("BayesianSampling", dataset, opts, view = FALSE)
 
   # Check analysis runs without error
   expect_false(isTRUE(results[["status"]] == "error"),

@@ -208,14 +208,6 @@ test_that("Bayesian sampling - other priors ignore retained impartial shape and 
 
 
 test_that("Bayesian sampling - a valid concentrated impartial prior reaches planning and finite-lot inference", {
-  # Preserve the six-decimal quality limits through the test runner's JSON.
-  fetch_args <- getFromNamespace("fetchRunArgs", "jaspTools")
-  testthat::local_mocked_bindings(
-    fetchRunArgs = function(name, options) {
-      args <- fetch_args(name, options)
-      args$options <- jsonlite::toJSON(options, digits = NA)
-      args
-    }, .package = "jaspTools")
   options <- .bsPriorShapeOptionsForTest()
   options$aqlplan <- 1e-6
   options$rqlplan <- 2e-6

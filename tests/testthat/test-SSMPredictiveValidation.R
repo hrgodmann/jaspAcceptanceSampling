@@ -163,12 +163,11 @@ test_that("decision notes follow strict rules and changed thresholds without ref
       options$ssm_decisionAcceptThreshold <- cases$accept[i]
       options$ssm_decisionRejectThreshold <- cases$reject[i]
       jaspResults$.__enclos_env__$private$changeOptions(as.character(jsonlite::toJSON(options)))
-      jaspTools:::preloadDataset(csv, options)
       jaspBase:::emptyRecomputed()
-      original(jaspResults, NULL, options)
+      original(jaspResults, dataset, options)
       # Repeated builder calls on the same table must not append duplicate notes.
-      get(".asSSM_createSummaryTable", ns)(jaspResults, fixture_data, options)
-      get(".asSSM_createSummaryTable", ns)(jaspResults, fixture_data, options)
+      get(".asSSM_createSummaryTable", ns)(jaspResults, dataset, options)
+      get(".asSSM_createSummaryTable", ns)(jaspResults, dataset, options)
       jaspResults$.__enclos_env__$private$complete()
       result <- jsonlite::fromJSON(jaspTools:::getJsonResultsFromJaspResults(jaspResults),
                                    simplifyVector = FALSE)

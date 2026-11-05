@@ -1,3 +1,11 @@
+test_that("three-region calibration retains the exact uniform boundary", {
+  # The GUI accepts six decimals, so test the exact closed-form boundary here.
+  for (constraint in c("none", "no_U", "both_ge_1")) {
+    fit <- jaspAcceptanceSampling:::.bsSolveImpartialThree(1/3, 2/3, constraint)
+    expect_equal(unlist(fit, use.names = FALSE), c(1, 1), tolerance = 1e-8)
+  }
+})
+
 test_that("three-region calibration matches independent high-precision Beta references", {
   reference <- read.csv(test_path("fixtures", "bayesian-three-region-priors.csv"))
   for (i in seq_len(nrow(reference))) {

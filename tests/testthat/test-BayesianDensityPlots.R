@@ -71,7 +71,8 @@ test_that("Bayesian sampling - adaptive grids retain finite endpoints, modes, an
 
 test_that("Bayesian sampling - actual prior and posterior layers preserve distinct narrow peaks", {
   options <- .bsDensityOptionsForTest()
-  options$alphaplan <- options$betaplan <- 1e5
+  # Custom-prior controls allow at most 10000; larger parameters are tested above.
+  options$alphaplan <- options$betaplan <- 10000
   options$aqlplan <- .4
   options$rqlplan <- .5
   options$data_ninfer <- options$lot_sizeinfer <- 10000
@@ -80,21 +81,14 @@ test_that("Bayesian sampling - actual prior and posterior layers preserve distin
   expect_identical(result$status, "complete")
   prior <- .bsDensityPlotForTest(result, "Prior")
   posterior <- .bsDensityPlotForTest(result, "Posterior")
-  .bsDensityPeakForTest(prior, 1e5, 1e5, "Prior")
-  .bsDensityPeakForTest(posterior, 1e5, 1e5, "Prior")
-  .bsDensityPeakForTest(posterior, 1e5, 110000, "Posterior")
+  .bsDensityPeakForTest(prior, 10000, 10000, "Prior")
+  .bsDensityPeakForTest(posterior, 10000, 10000, "Prior")
+  .bsDensityPeakForTest(posterior, 10000, 20000, "Posterior")
   expect_warning(ggplot2::ggplotGrob(prior), NA)
   expect_warning(ggplot2::ggplotGrob(posterior), NA)
 })
 
 test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved in the rendered plot", {
-  # Preserve six-decimal inputs through jaspTools' otherwise four-digit JSON.
-  fetch_args <- getFromNamespace("fetchRunArgs", "jaspTools")
-  testthat::local_mocked_bindings(fetchRunArgs = function(name, options) {
-    args <- fetch_args(name, options)
-    args$options <- jsonlite::toJSON(options, digits = NA)
-    args
-  }, .package = "jaspTools")
   options <- .bsDensityOptionsForTest()
   options$priorplan <- "impartial_three"
   options$aqlplan <- .499999

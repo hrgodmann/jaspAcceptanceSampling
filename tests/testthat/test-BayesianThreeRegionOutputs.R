@@ -40,17 +40,13 @@ test_that("Bayesian sampling - equal-thirds controls preserve existing defaults"
 })
 
 test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis stages", {
-  fetch_args <- getFromNamespace("fetchRunArgs", "jaspTools")
-  testthat::local_mocked_bindings(fetchRunArgs = function(name, options) {
-    args <- fetch_args(name, options)
-    args$options <- jsonlite::toJSON(options, digits = NA)
-    args
-  }, .package = "jaspTools")
+  # QML accepts six decimals. Exact 1/3 and 2/3 (the uniform boundary)
+  # are covered by test-BayesianThreeRegionPrior.R; this reachable pair is unimodal.
   cases <- list(
     list(aql = .05, rql = .15, constraints = c("none", "no_U")),
     list(aql = .05, rql = .055, constraints = c("none", "no_U", "both_ge_1")),
     list(aql = .1, rql = .9, constraints = "none"),
-    list(aql = 1/3, rql = 2/3, constraints = c("none", "no_U", "both_ge_1")))
+    list(aql = .333334, rql = .666666, constraints = c("none", "no_U", "both_ge_1")))
   original_prior <- get(".bsCalculatePriorParams", asNamespace("jaspAcceptanceSampling"))
   for (case in cases) {
     calibrated <- list()
@@ -76,9 +72,7 @@ test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis 
       expect_true(all(is.finite(params) & params > 0))
       expect_equal(.bsThreeQuadratureForTest(params[1L], params[2L], case$aql, case$rql),
                    rep(1/3, 3L), tolerance = 1e-8)
-      if (identical(case$aql, 1/3)) {
-        expect_equal(unname(params), c(1, 1), tolerance = 1e-8)
-      } else if (constraint == "both_ge_1") {
+      if (constraint == "both_ge_1") {
         expect_true(all(params >= 1))
       } else if (constraint == "no_U") {
         expect_true(any(params >= 1))

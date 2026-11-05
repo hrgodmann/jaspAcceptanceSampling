@@ -35,18 +35,6 @@ test_that("Bayesian predictive plots preserve their regular count axis", {
 })
 
 test_that("Bayesian quality thresholds retain input precision in tables and text", {
-  # jaspTools 0.20.1 serializes options with jsonlite's default four digits,
-  # collapsing .123456 and .123457 before they reach the analysis. Preserve
-  # the entered doubles in this runner step; all analysis/output code is real.
-  fetch_args <- getFromNamespace("fetchRunArgs", "jaspTools")
-  testthat::local_mocked_bindings(
-    fetchRunArgs = function(name, options) {
-      args <- fetch_args(name, options)
-      args$options <- jsonlite::toJSON(options, digits = NA)
-      args
-    },
-    .package = "jaspTools"
-  )
   cases <- data.frame(
     aql = c(.0001, .000001, .123456),
     rql = c(.0002, .000002, .123457),

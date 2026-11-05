@@ -18,8 +18,9 @@ test_that("Bayesian log probabilities and Bayes factors match high-precision ref
     expected <- unlist(z[c("prior_good", "prior_middle", "prior_bad",
                            "post_good", "post_middle", "post_bad", "log_bf",
                            "log_bf_gb", "log_bf_gm", "log_bf_mb")], use.names = FALSE)
-    expect_true(max(abs(actual - expected)) < 1e-8, info = z$case)
-    expect_true(abs(binary$log_bf - z$log_bf) <= binary$tolerance, info = z$case)
+    expect_true(max(abs(actual - expected)) < 1e-8,
+                info = sprintf("%s: maximum absolute error %.17g", z$case,
+                               max(abs(actual - expected))))
   }
 })
 
@@ -82,6 +83,11 @@ test_that("exact acceptance ties survive roundoff while resolved differences rem
     target <- 2^(n + 1) - 1
     evidence <- jaspAcceptanceSampling:::.bsLogBF(rql = .5, n = n, c = 0,
                                                 alpha = 1, beta = 1)
+    # The decision-tie allowance is not a general error bound for beta tails.
+    # Check it here against exact analytic ties, separately from reference accuracy.
+    expect_true(abs(evidence$log_bf - log(target)) <= evidence$tolerance,
+                info = sprintf("n = %d: tie error %.17g, allowance %.17g", n,
+                               abs(evidence$log_bf - log(target)), evidence$tolerance))
     expect_equal(jaspAcceptanceSampling:::.bsAcceptanceNumber(
       n = n, rql = .5, min_bf = target, alpha = 1, beta = 1), 0)
     reached <- jaspAcceptanceSampling:::.bsMeetsLogBF(

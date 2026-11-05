@@ -62,33 +62,19 @@ test_that("Bayesian sampling - infeasible requested tables do not suppress a val
   }
 })
 
-test_that("Bayesian sampling - invalid planning controls leave the selected prior visible", {
-  cases <- list(
-    list(option = "max_nplan", value = 0, message = "maximum sample size"),
-    list(option = "min_bfplan", value = 0, message = "minimum Bayes factor"))
-  for (case in cases) {
+test_that("Bayesian sampling - invalid planning controls are rejected by the QML input bounds", {
+  for (option in c("max_nplan", "min_bfplan")) {
     options <- .bsPriorPlanningOptionsForTest()
     options$showPlansplan <- TRUE
     options$showThreeBFplan <- TRUE
-    options[[case$option]] <- case$value
-    results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
-                                     options = options, view = FALSE)
-    collection <- .bsPlanningCollectionForTest(results)
-    prior <- collection$planContainer_distPlotPrior
-    expect_identical(results$status, "complete")
-    expect_false(is.null(prior))
-    expect_null(prior[["error"]])
-    expect_identical(prior$status, "complete")
-    expect_true(prior$data %in% names(results$state$figures))
-    for (key in c("planContainer_planTable", "planContainer_threeBFTable")) {
-      expect_match(paste(collection[[key]]$error$errorMessage, collapse = ""),
-                   case$message, fixed = TRUE)
-      expect_identical(collection[[key]]$status, "error")
-    }
+    options[[option]] <- 0
+    expect_error(
+      jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
+      paste0(option, ": The value must be"), fixed = TRUE)
   }
 })
 
-test_that("Bayesian sampling - prior survives plan infeasibility and table recovery", {
+test_that("Bayesian sampling - prior survives plan infeasibility, invalid BF targets, and recovery", {
   options <- .bsPriorPlanningOptionsForTest()
   options$showPlansplan <- TRUE
   options$showThreeBFplan <- TRUE
@@ -106,8 +92,10 @@ test_that("Bayesian sampling - prior survives plan infeasibility and table recov
       .bsPlanningCollectionForTest(result)
     }
     observed[[1L]] <<- readCollection()
-    for (max_n in c(1, 40)) {
-      options$max_nplan <- max_n
+    changes <- list(list(max_nplan = 1), list(max_nplan = 40),
+                    list(min_bfplan = 0), list(min_bfplan = 30))
+    for (change in changes) {
+      options[names(change)] <- change
       # Exercise the real engine's dependency invalidation on the same result.
       private$changeOptions(as.character(jsonlite::toJSON(options)))
       jaspBase:::emptyRecomputed()
@@ -122,8 +110,8 @@ test_that("Bayesian sampling - prior survives plan infeasibility and table recov
   results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                    options = options, view = FALSE)
   expect_identical(results$status, "complete")
-  expect_equal(visited, 2L)
-  expect_length(observed, 3L)
+  expect_equal(visited, 4L)
+  expect_length(observed, 5L)
   for (collection in observed) {
     prior <- collection$planContainer_distPlotPrior
     expect_false(is.null(prior))
@@ -139,5 +127,11 @@ test_that("Bayesian sampling - prior survives plan infeasibility and table recov
                  "No sampling plan found", fixed = TRUE)
     expect_null(observed[[3L]][[key]]$error)
     expect_equal(observed[[3L]][[key]]$data, observed[[1L]][[key]]$data)
+    expect_identical(observed[[4L]][[key]]$status, "error")
+    expect_match(paste(observed[[4L]][[key]]$error$errorMessage, collapse = ""),
+                 "minimum Bayes factor", fixed = TRUE)
+    expect_identical(observed[[5L]][[key]]$status, "complete")
+    expect_null(observed[[5L]][[key]]$error)
+    expect_equal(observed[[5L]][[key]]$data, observed[[1L]][[key]]$data)
   }
 })

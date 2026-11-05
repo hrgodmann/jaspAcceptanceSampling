@@ -48,7 +48,7 @@ test_that("BayesianSSMforAS - options load", {
 
   expect_true(is.list(options))
   expect_true("ssm_count" %in% names(options))
-  expect_true("ssm_predictor" %in% names(options))
+  # An empty optional selector may be omitted from the generated options.
   expect_length(getFromNamespace(".asSSM_predictorNames", "jaspAcceptanceSampling")(options), 0L)
   expect_identical(options$ssm_printDiagnostics, FALSE)
   expect_equal(options$ssm_advancedMcmcAdaptDelta, 0.97)

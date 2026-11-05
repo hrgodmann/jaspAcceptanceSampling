@@ -81,11 +81,15 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   normalized <- list()
   generations <- 0L
   wrapper <- function(jaspResults, dataset, options) {
-    incoming[[length(incoming) + 1L]] <<- dataset
+    captured <- dataset
+    names(captured) <- jaspSyntax::decodeColumnNames(names(captured))
+    incoming[[length(incoming) + 1L]] <<- captured
     original(jaspResults, dataset, options)
   }
   fit <- function(jaspResults, dataset, options) {
-    normalized[[length(normalized) + 1L]] <<- dataset
+    captured <- dataset
+    names(captured) <- jaspSyntax::decodeColumnNames(names(captured))
+    normalized[[length(normalized) + 1L]] <<- captured
     error <- get(".asSSM_validateInputs", ns)(dataset, options)
     if (!is.null(error)) {
       get(".asSSM_setAnalysisError", ns)(jaspResults, error)
@@ -115,9 +119,9 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   numeric <- .ssm_ordinal_data()
   ordinal <- numeric
   ordinal$lot <- ordered(as.character(numeric$lot), levels = c("120", "40", "10"))
-  # encodedDataset preserves the supplied types exactly, as native preloading does.
-  baseline <- jaspTools::runAnalysis("BayesianSSMforAS", numeric, options, view = FALSE, encodedDataset = TRUE)
-  actual <- jaspTools::runAnalysis("BayesianSSMforAS", ordinal, options, view = FALSE, encodedDataset = TRUE)
+  # Exercise native input handling with both numeric and ordered lot labels.
+  baseline <- jaspTools::runAnalysis("BayesianSSMforAS", numeric, options, view = FALSE)
+  actual <- jaspTools::runAnalysis("BayesianSSMforAS", ordinal, options, view = FALSE)
   expect_identical(baseline$status, "complete")
   expect_identical(actual$status, "complete")
   expect_true(is.numeric(incoming[[1L]]$lot))
@@ -132,7 +136,7 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   for (column in c("lot", "count")) {
     missing <- ordinal
     missing[[column]][1L] <- NA
-    result <- jaspTools::runAnalysis("BayesianSSMforAS", missing, options, view = FALSE, encodedDataset = TRUE)
+    result <- jaspTools::runAnalysis("BayesianSSMforAS", missing, options, view = FALSE)
     expect_identical(result$status, "complete")
     expect_equal(nrow(tail(incoming, 1L)[[1L]]), 3L)
     expect_equal(nrow(tail(normalized, 1L)[[1L]]), 3L)

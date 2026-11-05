@@ -29,8 +29,9 @@
     if (!is.null(jaspResults[["fit"]]$object)) return()
     fixture$generations <- fixture$generations + 1L
     design <- get(".asSSM_predictorDesign", ns)(dataset, options)
-    design$labels <- unname(fixture$labels[design$names])
-    beta <- fixture$draws[, design$names, drop = FALSE]
+    fixtureNames <- jaspSyntax::decodeColumnNames(design$names)
+    design$labels <- unname(fixture$labels[fixtureNames])
+    beta <- fixture$draws[, fixtureNames, drop = FALSE]
     if (length(design$names) == 1L) beta <- as.numeric(beta)
     y <- tail(dataset[[options$ssm_count]], 1L)
     jaspResults[["fit"]]$object <- list(
