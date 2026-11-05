@@ -2,19 +2,19 @@
 
 .bsPriorShapeOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorplan <- "impartial"
-  options$aqlplan <- .05
-  options$rqlplan <- .15
-  options$impartialShapeplan <- "unimodal"
-  options$impartialCustomModeplan <- TRUE
-  options$impartialModeplan <- .05
-  options$priorPlotplan <- TRUE
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- FALSE
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- FALSE
+  options$planningPriorDistribution <- "impartial"
+  options$planningAcceptableQualityLevel <- .05
+  options$planningRejectableQualityLevel <- .15
+  options$planningPriorImpartialShape <- "unimodal"
+  options$planningPriorImpartialCustomLocation <- TRUE
+  options$planningPriorImpartialLocation <- .05
+  options$planningPriorPlot <- TRUE
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- FALSE
   options
 }
 
@@ -24,12 +24,12 @@
 
 test_that("Bayesian sampling - parsed impartial defaults preserve the existing location options", {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  expect_identical(options$priorplan, "impartial")
-  expect_identical(options$impartialShapeplan, "unimodal")
-  expect_false(options$impartialCustomModeplan)
-  expect_equal(options$impartialModeplan, .05)
-  expect_true("impartialShapeplan" %in% jaspAcceptanceSampling:::.bsPlanningDeps())
-  expect_true("impartialShapeplan" %in% jaspAcceptanceSampling:::.bsInferenceDeps())
+  expect_identical(options$planningPriorDistribution, "impartial")
+  expect_identical(options$planningPriorImpartialShape, "unimodal")
+  expect_false(options$planningPriorImpartialCustomLocation)
+  expect_equal(options$planningPriorImpartialLocation, .05)
+  expect_true("planningPriorImpartialShape" %in% jaspAcceptanceSampling:::.bsPlanningDeps())
+  expect_true("planningPriorImpartialShape" %in% jaspAcceptanceSampling:::.bsInferenceDeps())
 })
 
 test_that("Bayesian sampling - selected prior shape and location reach planning and inference", {
@@ -41,11 +41,11 @@ test_that("Bayesian sampling - selected prior shape and location reach planning 
   original_plot <- get(".bsDistributionPlot", asNamespace("jaspAcceptanceSampling"))
   for (case in cases) {
     options <- .bsPriorShapeOptionsForTest()
-    options$showPlansplan <- FALSE
-    options$impartialShapeplan <- case$shape
-    options$rqlplan <- case$rql
-    options$impartialCustomModeplan <- case$custom
-    options$impartialModeplan <- case$retained
+    options$planningPlansTable <- FALSE
+    options$planningPriorImpartialShape <- case$shape
+    options$planningRejectableQualityLevel <- case$rql
+    options$planningPriorImpartialCustomLocation <- case$custom
+    options$planningPriorImpartialLocation <- case$retained
     plotted <- list()
     plot_wrapper <- function(container, aql, rql, alpha, beta, type, ...) {
       plotted[[type]] <<- c(alpha = alpha, beta = beta)
@@ -64,7 +64,7 @@ test_that("Bayesian sampling - selected prior shape and location reach planning 
                  tolerance = 1e-8)
     expect_equal(pbeta(case$rql, params[1L], params[2L]), .5, tolerance = 1e-8)
     expect_equal(plotted$Posterior,
-                 params + c(alpha = options$data_dinfer, beta = options$data_ninfer - options$data_dinfer),
+                 params + c(alpha = options$inferenceObservedDefectives, beta = options$inferenceSampleSize - options$inferenceObservedDefectives),
                  tolerance = 1e-8)
     planning <- .bsPriorShapeCollectionForTest(result, "planContainer")
     inference <- .bsPriorShapeCollectionForTest(result, "infContainer")
@@ -89,9 +89,9 @@ test_that("Bayesian sampling - incompatible and unidentified impartial priors sh
     list(shape = "unimodal", location = .15, rql = .15))
   for (case in cases) {
     options <- .bsPriorShapeOptionsForTest()
-    options$impartialShapeplan <- case$shape
-    options$impartialModeplan <- case$location
-    options$rqlplan <- case$rql
+    options$planningPriorImpartialShape <- case$shape
+    options$planningPriorImpartialLocation <- case$location
+    options$planningRejectableQualityLevel <- case$rql
     result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                     options = options, view = FALSE)
     expect_identical(result$status, "complete")
@@ -110,8 +110,8 @@ test_that("Bayesian sampling - shape-only changes invalidate plans and recover c
   original_inference <- get(".bsInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
   for (initial_shape in c("unimodal", "u_shaped")) {
     options <- .bsPriorShapeOptionsForTest()
-    options$impartialShapeplan <- initial_shape
-    options$impartialModeplan <- if (initial_shape == "unimodal") .05 else .95
+    options$planningPriorImpartialShape <- initial_shape
+    options$planningPriorImpartialLocation <- if (initial_shape == "unimodal") .05 else .95
     other <- if (initial_shape == "unimodal") "u_shaped" else "unimodal"
     observed <- list()
     cache_removed <- logical()
@@ -124,7 +124,7 @@ test_that("Bayesian sampling - shape-only changes invalidate plans and recover c
       }
       observed[[1L]] <<- readOutput()
       for (i in seq_along(c(other, initial_shape))) {
-        options$impartialShapeplan <- c(other, initial_shape)[i]
+        options$planningPriorImpartialShape <- c(other, initial_shape)[i]
         private$changeOptions(as.character(jsonlite::toJSON(options)))
         cache_removed <<- c(cache_removed, is.null(jaspResults[["planData"]]))
         jaspBase:::emptyRecomputed()
@@ -167,12 +167,12 @@ test_that("Bayesian sampling - other priors ignore retained impartial shape and 
   original <- get(".bsInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
   for (prior in c("uniform", "custom", "impartial_three")) {
     options <- .bsPriorShapeOptionsForTest()
-    options$priorplan <- prior
-    options$alphaplan <- 2
-    options$betaplan <- 3
-    options$showPlansplan <- FALSE
-    options$priorPlotplan <- FALSE
-    options$posteriorPlotinfer <- FALSE
+    options$planningPriorDistribution <- prior
+    options$planningPriorAlpha <- 2
+    options$planningPriorBeta <- 3
+    options$planningPlansTable <- FALSE
+    options$planningPriorPlot <- FALSE
+    options$inferencePosteriorPlot <- FALSE
     observed <- list()
     wrapper <- function(jaspResults, options, position) {
       private <- jaspResults$.__enclos_env__$private
@@ -184,9 +184,9 @@ test_that("Bayesian sampling - other priors ignore retained impartial shape and 
       original(jaspResults, options, position)
       observed[[1L]] <<- readCollection()
       # This retained minimum/RQL pair would be incompatible if impartial were selected.
-      options$impartialShapeplan <- "u_shaped"
-      options$impartialCustomModeplan <- TRUE
-      options$impartialModeplan <- .05
+      options$planningPriorImpartialShape <- "u_shaped"
+      options$planningPriorImpartialCustomLocation <- TRUE
+      options$planningPriorImpartialLocation <- .05
       private$changeOptions(as.character(jsonlite::toJSON(options)))
       jaspBase:::emptyRecomputed()
       original(jaspResults, options, position)
@@ -209,19 +209,19 @@ test_that("Bayesian sampling - other priors ignore retained impartial shape and 
 
 test_that("Bayesian sampling - a valid concentrated impartial prior reaches planning and finite-lot inference", {
   options <- .bsPriorShapeOptionsForTest()
-  options$aqlplan <- 1e-6
-  options$rqlplan <- 2e-6
-  options$impartialShapeplan <- "unimodal"
-  options$impartialCustomModeplan <- FALSE
-  options$impartialModeplan <- .95
-  options$max_nplan <- 1
-  options$min_bfplan <- 1
-  options$priorPlotplan <- FALSE
-  options$posteriorPlotinfer <- FALSE
-  options$ppdPlotinfer <- TRUE
-  options$data_ninfer <- 100
-  options$data_dinfer <- 0
-  options$lot_sizeinfer <- 100
+  options$planningAcceptableQualityLevel <- 1e-6
+  options$planningRejectableQualityLevel <- 2e-6
+  options$planningPriorImpartialShape <- "unimodal"
+  options$planningPriorImpartialCustomLocation <- FALSE
+  options$planningPriorImpartialLocation <- .95
+  options$planningMaximumSampleSize <- 1
+  options$planningMinimumBayesFactor <- 1
+  options$planningPriorPlot <- FALSE
+  options$inferencePosteriorPlot <- FALSE
+  options$inferencePosteriorPredictivePlot <- TRUE
+  options$inferenceSampleSize <- 100
+  options$inferenceObservedDefectives <- 0
+  options$inferenceLotSize <- 100
   ns <- asNamespace("jaspAcceptanceSampling")
   original_prior <- get(".bsCalculatePriorParams", ns)
   original_table <- get(".bsInferenceDecisionTable", ns)
@@ -252,7 +252,7 @@ test_that("Bayesian sampling - a valid concentrated impartial prior reaches plan
   # This reference integrates the density on a rescaled unit interval; it does
   # not call the production log-tail helpers or pbeta().
   integrated_probability <- function(a, b) {
-    stats::integrate(function(u) stats::dbeta(options$rqlplan * u, a, b) * options$rqlplan,
+    stats::integrate(function(u) stats::dbeta(options$planningRejectableQualityLevel * u, a, b) * options$planningRejectableQualityLevel,
                      lower = 0, upper = 1, rel.tol = 1e-11, abs.tol = 1e-13,
                      subdivisions = 2000L)$value
   }

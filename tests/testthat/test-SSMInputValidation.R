@@ -1,6 +1,6 @@
 .ssm_input_options <- function(predictor = FALSE) {
-  list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s", ssm_time = "lot",
-       ssm_predictor = if (predictor) "x" else "")
+  list(defectCount = "count", sampleSize = "n", lotSize = "s", lotNumber = "lot",
+       covariates = if (predictor) "x" else "")
 }
 
 .ssm_input_data <- function() {
@@ -159,11 +159,11 @@ test_that("predictor assignment alone governs readiness and validation", {
   expect_true(ready(options, data))
   expect_null(validate(data, options))
 
-  options$ssm_predictor <- "x"
+  options$covariates <- "x"
   options$ssm_scaleModel <- "WithoutPredictor"
   expect_true(ready(options, data))
   expect_match(validate(data, options), "vary|variation|constant", ignore.case = TRUE)
-  options$ssm_count <- ""
+  options$defectCount <- ""
   expect_false(ready(options, data))
 })
 

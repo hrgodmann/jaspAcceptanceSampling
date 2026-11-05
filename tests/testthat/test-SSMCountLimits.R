@@ -58,17 +58,17 @@ test_that("table decisions and plot limits share strict decimal count boundaries
     .asSSM_getStanModel = function(...) stop("Count-limit fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = character())
+  assignments <- list(defectCount = "y", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = character())
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("ssm_statePlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
-                 "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
+                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
-  options$ssm_predictionPlot <- TRUE
-  options$ssm_decisionAcceptThreshold <- .10
-  options$ssm_decisionRejectThreshold <- .05
+  options$plotsPosteriorPredictive <- TRUE
+  options$settingsAcceptanceThreshold <- .10
+  options$settingsRejectionThreshold <- .05
   cases <- list(
     list(s = 100, n = 100, y = 29, draws = rep(29, 4), aql = .05, rql = .29,
          limits = c(5, 29), below = 0, above = 0, decision = "Accept"),
@@ -100,9 +100,9 @@ test_that("table decisions and plot limits share strict decimal count boundaries
   on.exit(unlink(csv), add = TRUE)
   for (case in cases) {
     fixture$draws <- case$draws
-    options$ssm_decisionRejectThreshold <- if (is.null(case$reject)) .05 else case$reject
-    options$ssm_controlLimitsLower <- case$aql
-    options$ssm_controlLimitsUpper <- case$rql
+    options$settingsRejectionThreshold <- if (is.null(case$reject)) .05 else case$reject
+    options$settingsAcceptableQualityLevel <- case$aql
+    options$settingsRejectableQualityLevel <- case$rql
     utils::write.csv(data.frame(y = case$y, n = case$n, s = case$s, lot = 1),
                       csv, row.names = FALSE)
     result <- jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE)

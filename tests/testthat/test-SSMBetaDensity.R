@@ -33,7 +33,7 @@
     design$labels <- unname(fixture$labels[fixtureNames])
     beta <- fixture$draws[, fixtureNames, drop = FALSE]
     if (length(design$names) == 1L) beta <- as.numeric(beta)
-    y <- tail(dataset[[options$ssm_count]], 1L)
+    y <- tail(dataset[[options$defectCount]], 1L)
     jaspResults[["fit"]]$object <- list(
       samples = list(y_pred = y + c(0, 1, 1, 2, 2, 3), beta_predictor = beta),
       predictor_design = design)
@@ -43,13 +43,13 @@
 
 .ssm_beta_plot_options <- function(predictors) {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = predictors)
+  assignments <- list(defectCount = "count", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = predictors)
   options[names(assignments)] <- assignments
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
-  options$ssm_plotBeta <- TRUE
+  options$plotsPredictorCoefficients <- TRUE
   options
 }
 

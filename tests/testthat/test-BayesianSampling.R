@@ -3,10 +3,10 @@
 test_that("Bayesian sampling - planning table is generated", {
   options <- jaspTools::analysisOptions("BayesianSampling")
 
-  options$showPlansplan <- TRUE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$inferPosteriorinfer <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$inferenceUseData <- FALSE
 
   results <- jaspTools::runAnalysis("BayesianSampling", "test.csv", options)
 
@@ -37,14 +37,14 @@ test_that("Bayesian sampling - planning table is generated", {
 test_that("Bayesian sampling - inference decision table is generated", {
   options <- jaspTools::analysisOptions("BayesianSampling")
 
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
 
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- FALSE
-  options$ppdPlotinfer <- FALSE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- FALSE
+  options$inferencePosteriorPredictivePlot <- FALSE
 
   results <- jaspTools::runAnalysis("BayesianSampling", "test.csv", options)
 
@@ -68,16 +68,16 @@ test_that("Bayesian sampling - inference decision table is generated", {
 test_that("Bayesian sampling - invalid impartial prior fails gracefully", {
   options <- jaspTools::analysisOptions("BayesianSampling")
 
-  options$showPlansplan <- TRUE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$inferPosteriorinfer <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$inferenceUseData <- FALSE
 
-  options$aqlplan <- 0.5
-  options$rqlplan <- 0.9
-  options$priorplan <- "impartial"
-  options$impartialCustomModeplan <- TRUE
-  options$impartialModeplan <- 0.8
+  options$planningAcceptableQualityLevel <- 0.5
+  options$planningRejectableQualityLevel <- 0.9
+  options$planningPriorDistribution <- "impartial"
+  options$planningPriorImpartialCustomLocation <- TRUE
+  options$planningPriorImpartialLocation <- 0.8
 
   results <- jaspTools::runAnalysis("BayesianSampling", "test.csv", options)
 
@@ -165,14 +165,14 @@ test_that("Bayesian sampling - errored containers are refreshed before reuse", {
 test_that("Bayesian sampling - plot outputs are generated", {
   options <- jaspTools::analysisOptions("BayesianSampling")
 
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- TRUE
-  options$showThreeBFplan <- FALSE
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
 
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- FALSE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- TRUE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- FALSE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- TRUE
 
   results <- jaspTools::runAnalysis("BayesianSampling", "test.csv", options)
 
@@ -188,13 +188,13 @@ test_that("Bayesian sampling - plot outputs are generated", {
 test_that("Bayesian sampling - three-hypothesis probabilities remain a valid partition", {
   options <- jaspTools::analysisOptions("BayesianSampling")
 
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- TRUE
-  options$inferPosteriorinfer <- FALSE
-  options$priorplan <- "impartial_three"
-  options$aqlplan <- 0.05
-  options$rqlplan <- 0.15
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$inferenceUseData <- FALSE
+  options$planningPriorDistribution <- "impartial_three"
+  options$planningAcceptableQualityLevel <- 0.05
+  options$planningRejectableQualityLevel <- 0.15
 
   results <- jaspTools::runAnalysis("BayesianSampling", "test.csv", options)
 

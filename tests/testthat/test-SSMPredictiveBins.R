@@ -12,17 +12,17 @@
     .asSSM_getStanModel = function(...) stop("Predictive bin fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = character())
+  assignments <- list(defectCount = "y", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = character())
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("ssm_statePlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
-                 "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
+                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
-  options$ssm_predictionPlot <- TRUE
-  options$ssm_controlLimitsLower <- .05
-  options$ssm_controlLimitsUpper <- .1
+  options$plotsPosteriorPredictive <- TRUE
+  options$settingsAcceptableQualityLevel <- .05
+  options$settingsRejectableQualityLevel <- .1
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
   utils::write.csv(data.frame(y = defects, n = inspected, s = lotSize, lot = 1),

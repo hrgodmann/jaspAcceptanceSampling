@@ -141,7 +141,7 @@
   fit <- jaspResults[["fit"]]
   if (is.null(fit) || is.null(fit$object)) return()
 
-  printDiagnostics <- isTRUE(options[["ssm_printDiagnostics"]])
+  printDiagnostics <- isTRUE(options[["mcmcDiagnosticsPrint"]])
   diagnostics <- fit$object$diagnostics
   if (!printDiagnostics && !length(.asSSM_diagnosticMessages(diagnostics))) return()
 
@@ -150,5 +150,5 @@
     title = if (printDiagnostics) gettext("Computational Diagnostics") else gettext("Sampling Warnings"),
     # Result positions are integers; keep the full report after coefficient plots.
     position = if (printDiagnostics) 5 else -1,
-    dependencies = c(.asSSM_fitDependencies(), "ssm_printDiagnostics"))
+    dependencies = c(.asSSM_fitDependencies(), "mcmcDiagnosticsPrint"))
 }

@@ -1,16 +1,16 @@
 # The actual result-engine plots must retain narrow peaks and both endpoint tails.
 .bsDensityOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorplan <- "custom"
-  options$alphaplan <- 1
-  options$betaplan <- 1
-  options$showPlansplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$priorPlotplan <- TRUE
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- FALSE
+  options$planningPriorDistribution <- "custom"
+  options$planningPriorAlpha <- 1
+  options$planningPriorBeta <- 1
+  options$planningPlansTable <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$planningPriorPlot <- TRUE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- FALSE
   options
 }
 
@@ -72,11 +72,11 @@ test_that("Bayesian sampling - adaptive grids retain finite endpoints, modes, an
 test_that("Bayesian sampling - actual prior and posterior layers preserve distinct narrow peaks", {
   options <- .bsDensityOptionsForTest()
   # Custom-prior controls allow at most 10000; larger parameters are tested above.
-  options$alphaplan <- options$betaplan <- 10000
-  options$aqlplan <- .4
-  options$rqlplan <- .5
-  options$data_ninfer <- options$lot_sizeinfer <- 10000
-  options$data_dinfer <- 0
+  options$planningPriorAlpha <- options$planningPriorBeta <- 10000
+  options$planningAcceptableQualityLevel <- .4
+  options$planningRejectableQualityLevel <- .5
+  options$inferenceSampleSize <- options$inferenceLotSize <- 10000
+  options$inferenceObservedDefectives <- 0
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   prior <- .bsDensityPlotForTest(result, "Prior")
@@ -90,11 +90,11 @@ test_that("Bayesian sampling - actual prior and posterior layers preserve distin
 
 test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved in the rendered plot", {
   options <- .bsDensityOptionsForTest()
-  options$priorplan <- "impartial_three"
-  options$aqlplan <- .499999
-  options$rqlplan <- .5
-  options$impartialThreeConstraintplan <- "both_ge_1"
-  options$inferPosteriorinfer <- FALSE
+  options$planningPriorDistribution <- "impartial_three"
+  options$planningAcceptableQualityLevel <- .499999
+  options$planningRejectableQualityLevel <- .5
+  options$planningPriorThreeRegionShapeConstraint <- "both_ge_1"
+  options$inferenceUseData <- FALSE
   original <- get(".bsDistributionPlot", asNamespace("jaspAcceptanceSampling"))
   params <- NULL
   wrapper <- function(container, aql, rql, alpha, beta, type, ...) {
@@ -115,8 +115,8 @@ test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved 
 
 test_that("Bayesian sampling - actual U-shaped tails are mirrored and retained when expanding axes", {
   options <- .bsDensityOptionsForTest()
-  options$alphaplan <- options$betaplan <- .5
-  options$inferPosteriorinfer <- FALSE
+  options$planningPriorAlpha <- options$planningPriorBeta <- .5
+  options$inferenceUseData <- FALSE
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   plot <- .bsDensityPlotForTest(result, "Prior")
@@ -151,7 +151,7 @@ test_that("Bayesian sampling - actual U-shaped tails are mirrored and retained w
 
 test_that("Bayesian sampling - finite endpoint peaks and uniform overlays survive rendering", {
   options <- .bsDensityOptionsForTest()
-  options$data_ninfer <- options$data_dinfer <- options$lot_sizeinfer <- 10000
+  options$inferenceSampleSize <- options$inferenceObservedDefectives <- options$inferenceLotSize <- 10000
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   prior <- .bsDensityPlotForTest(result, "Prior")
@@ -166,12 +166,12 @@ test_that("Bayesian sampling - finite endpoint peaks and uniform overlays surviv
 
 test_that("Bayesian sampling - plotting leaves planning and inference numbers unchanged", {
   options <- .bsDensityOptionsForTest()
-  options$priorplan <- "impartial"
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
-  options$max_nplan <- 40
+  options$planningPriorDistribution <- "impartial"
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$planningMaximumSampleSize <- 40
   with_plots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
-  options$priorPlotplan <- options$posteriorPlotinfer <- FALSE
+  options$planningPriorPlot <- options$inferencePosteriorPlot <- FALSE
   without_plots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(with_plots$status, "complete")
   expect_identical(without_plots$status, "complete")
@@ -201,12 +201,12 @@ test_that("Bayesian sampling - off-panel density coordinates stay bounded withou
 
 test_that("Bayesian sampling - an asymmetric U prior renders despite extremely large off-panel densities", {
   options <- .bsDensityOptionsForTest()
-  options$priorplan <- "impartial"
-  options$impartialShapeplan <- "u_shaped"
-  options$impartialCustomModeplan <- TRUE
-  options$impartialModeplan <- .95
-  options$rqlplan <- .15
-  options$inferPosteriorinfer <- FALSE
+  options$planningPriorDistribution <- "impartial"
+  options$planningPriorImpartialShape <- "u_shaped"
+  options$planningPriorImpartialCustomLocation <- TRUE
+  options$planningPriorImpartialLocation <- .95
+  options$planningRejectableQualityLevel <- .15
+  options$inferenceUseData <- FALSE
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   plot <- .bsDensityPlotForTest(result, "Prior")

@@ -1,12 +1,12 @@
 .ssm_expected_fit_dependencies <- function() {
-  c("ssm_count", "ssm_total", "ssm_sampleSize", "ssm_time",
-    "ssm_predictor",
-    "ssm_priorTheta1Shape1", "ssm_priorTheta1Shape2",
-    "ssm_priorSigmaSD", "ssm_priorBetaScale",
-    "ssm_advancedMcmcBurnin", "ssm_advancedMcmcChains",
-    "ssm_advancedMcmcSamples", "ssm_advancedMcmcThin",
-    "ssm_advancedMcmcSeed", "ssm_advancedMcmcAdaptDelta",
-    "ssm_advancedMcmcMaxTreeDepth")
+  c("defectCount", "lotSize", "sampleSize", "lotNumber",
+    "covariates",
+    "modelInitialBaselineAlpha", "modelInitialBaselineBeta",
+    "modelInnovationPriorScale", "modelPredictorCauchyScale",
+    "advancedMcmcBurnin", "advancedMcmcChains",
+    "advancedMcmcSamples", "advancedMcmcThin",
+    "advancedMcmcSeed", "advancedMcmcAdaptDelta",
+    "advancedMcmcMaxTreeDepth")
 }
 
 .ssm_capture_dependencies <- function(function_name) {
@@ -21,10 +21,10 @@
     createJaspState = factory, createJaspTable = factory, createJaspPlot = factory,
     createJaspHtml = function(..., dependencies) capture(dependencies)
   ), parent = environment(fun))
-  options <- list(ssm_predictor = "x", ssm_showMcmcSummary = TRUE,
-                  ssm_printDiagnostics = TRUE,
-                  ssm_statePlot = TRUE, ssm_predictionPlot = TRUE,
-                  ssm_posteriorDistPlot = TRUE, ssm_plotBeta = TRUE)
+  options <- list(covariates = "x", mcmcDiagnosticsOverviewTable = TRUE,
+                  mcmcDiagnosticsPrint = TRUE,
+                  plotsStateTimeSeries = TRUE, plotsPosteriorPredictive = TRUE,
+                  plotsLatestDefectRate = TRUE, plotsPredictorCoefficients = TRUE)
   results <- if (function_name == ".asSSM_reportDiagnostics")
     list(fit = list(object = list())) else list()
   arguments <- list(jaspResults = results, options = options)
@@ -45,16 +45,16 @@ test_that("the fit depends on every data, prior and sampler setting", {
 
 test_that("every fitted output includes all model dependencies and its display controls", {
   extras <- list(
-    .asSSM_createSummaryTable = c("ssm_controlLimitsLower", "ssm_controlLimitsUpper",
-      "ssm_decisionAcceptThreshold", "ssm_decisionRejectThreshold"),
+    .asSSM_createSummaryTable = c("settingsAcceptableQualityLevel", "settingsRejectableQualityLevel",
+      "settingsAcceptanceThreshold", "settingsRejectionThreshold"),
     .asSSM_createPredictorSummaryTable = character(),
-    .asSSM_plotState = "ssm_statePlot",
-    .asSSM_plotPrediction = c("ssm_predictionPlot", "ssm_controlLimitsLower", "ssm_controlLimitsUpper"),
-    .asSSM_plotPosteriorDist = "ssm_posteriorDistPlot",
-    .asSSM_plotBetaCoefficient = "ssm_plotBeta",
-    .asSSM_createMcmcSummaryTable = c("ssm_showMcmcSummary", "ssm_showTheta",
-      "ssm_showSigma", "ssm_showYpred", "ssm_showBeta"),
-    .asSSM_reportDiagnostics = "ssm_printDiagnostics"
+    .asSSM_plotState = "plotsStateTimeSeries",
+    .asSSM_plotPrediction = c("plotsPosteriorPredictive", "settingsAcceptableQualityLevel", "settingsRejectableQualityLevel"),
+    .asSSM_plotPosteriorDist = "plotsLatestDefectRate",
+    .asSSM_plotBetaCoefficient = "plotsPredictorCoefficients",
+    .asSSM_createMcmcSummaryTable = c("mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsOverviewTheta",
+      "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta"),
+    .asSSM_reportDiagnostics = "mcmcDiagnosticsPrint"
   )
   for (name in names(extras)) {
     declared <- .ssm_capture_dependencies(name)
@@ -64,11 +64,55 @@ test_that("every fitted output includes all model dependencies and its display c
 })
 
 test_that("changing decisions or output visibility does not invalidate the fit", {
-  display_controls <- c("ssm_controlLimitsLower", "ssm_controlLimitsUpper",
-    "ssm_decisionAcceptThreshold", "ssm_decisionRejectThreshold",
-    "ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
-    "ssm_showMcmcSummary", "ssm_showTheta", "ssm_showSigma", "ssm_showYpred", "ssm_showBeta",
-    "ssm_printDiagnostics")
+  display_controls <- c("settingsAcceptableQualityLevel", "settingsRejectableQualityLevel",
+    "settingsAcceptanceThreshold", "settingsRejectionThreshold",
+    "plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate", "plotsPredictorCoefficients",
+    "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsOverviewTheta", "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta",
+    "mcmcDiagnosticsPrint")
   declared <- .ssm_capture_dependencies(".asSSM_fitModel")
   expect_length(intersect(declared, display_controls), 0L)
+})
+
+test_that("the real fit cache signature retains every renamed sampler setting", {
+  options <- jaspTools::analysisOptions("BayesianSSMforAS")
+  assignments <- list(defectCount = "defects", sampleSize = "tested",
+                      lotSize = "total", lotNumber = "lot")
+  options[names(assignments)] <- lapply(assignments, function(column) {
+    list(value = column, types = list("scale"))
+  })
+  options$covariates <- character()
+  expected <- list(
+    advancedMcmcBurnin = 100, advancedMcmcChains = 2,
+    advancedMcmcSamples = 300, advancedMcmcThin = 3,
+    advancedMcmcSeed = 456, advancedMcmcAdaptDelta = .91,
+    advancedMcmcMaxTreeDepth = 11
+  )
+  expect_true(all(names(expected) %in% names(options)))
+  options[names(expected)] <- expected
+
+  captured <- NULL
+  calls <- 0L
+  loader <- function(name) {
+    calls <<- calls + 1L
+    # Inspect the actual signature built before model loading; no Stan fit is needed.
+    captured <<- get("fitInputs", envir = parent.frame(), inherits = TRUE)
+    stop("Deliberate model-loader stop after capturing sampler settings.", call. = FALSE)
+  }
+  testthat::local_mocked_bindings(.asSSM_getStanModel = loader,
+                                 .package = "jaspAcceptanceSampling")
+  csv <- tempfile(fileext = ".csv")
+  on.exit(unlink(csv), add = TRUE)
+  utils::write.csv(data.frame(defects = c(1, 0, 2), tested = c(20, 20, 20),
+                             total = c(100, 100, 100), lot = c(10, 20, 30)),
+                   csv, row.names = FALSE)
+  result <- jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE)
+
+  expect_identical(calls, 1L)
+  expect_type(captured, "list")
+  expect_length(captured$settings, 7L)
+  expect_setequal(names(captured$settings), names(expected))
+  expect_equal(captured$settings, expected)
+  expect_identical(result$status, "complete")
+  final <- as.character(jsonlite::toJSON(result$results$placeholder, auto_unbox = TRUE))
+  expect_match(final, "Deliberate model-loader stop", fixed = TRUE)
 })

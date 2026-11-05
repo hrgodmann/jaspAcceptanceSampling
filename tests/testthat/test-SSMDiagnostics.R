@@ -258,7 +258,7 @@ test_that("a failure confined to a later coefficient produces a visible warning"
   expect_match(paste(api$messages(d), collapse = " "), "R-hat.*beta_predictor\\[3\\]")
 
   fixture <- .ssm_report_fixture(d)
-  fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
   warning <- fixture$results[["samplerDiagnostics"]]
   expect_identical(warning$title, "Sampling Warnings")
   expect_match(warning$text, "beta_predictor\\[3\\]")
@@ -272,9 +272,9 @@ test_that("healthy diagnostics are optional and switching them off clears the re
   fixture <- .ssm_report_fixture(d)
   cached_fit <- fixture$results[["fit"]]
 
-  fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
-  fixture$report(fixture$results, list(ssm_printDiagnostics = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
   full <- fixture$results[["samplerDiagnostics"]]
   expect_identical(full$title, "Computational Diagnostics")
   expect_match(full$text, "No diagnostic thresholds were exceeded")
@@ -282,7 +282,7 @@ test_that("healthy diagnostics are optional and switching them off clears the re
   expect_match(full$text, "maximum rank-normalized split R-hat")
   expect_match(full$text, "E-BFMI")
 
-  fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
   expect_identical(fixture$results[["fit"]], cached_fit)
 })
@@ -299,7 +299,7 @@ test_that("problematic and unavailable diagnostics warn even when printing is of
 
   for (i in seq_along(cases)) {
     fixture <- .ssm_report_fixture(cases[[i]])
-    fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+    fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
     warning <- fixture$results[["samplerDiagnostics"]]
     expect_identical(warning$title, "Sampling Warnings")
     expect_match(warning$text, "Sampling requires attention")
@@ -310,7 +310,7 @@ test_that("problematic and unavailable diagnostics warn even when printing is of
   }
 
   fixture <- .ssm_report_fixture(bad)
-  fixture$report(fixture$results, list(ssm_printDiagnostics = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
   full <- fixture$results[["samplerDiagnostics"]]
   expect_identical(full$title, "Computational Diagnostics")
   expect_match(full$text, "1 divergent transitions")
@@ -326,17 +326,17 @@ test_that("warnings clear after a healthy fit and stale reports clear without a 
   input$sampler[[1]][2, "divergent__"] <- 1
   bad <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
   fixture <- .ssm_report_fixture(bad)
-  fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
   expect_false(is.null(fixture$results[["samplerDiagnostics"]]))
 
   fixture$results[["fit"]] <- list(object = list(diagnostics = healthy))
-  fixture$report(fixture$results, list(ssm_printDiagnostics = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
 
-  fixture$report(fixture$results, list(ssm_printDiagnostics = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
   expect_false(is.null(fixture$results[["samplerDiagnostics"]]))
   fixture$results[["fit"]] <- NULL
-  fixture$report(fixture$results, list(ssm_printDiagnostics = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
   expect_null(fixture$results[["samplerDiagnostics"]])
 })
 

@@ -2,21 +2,21 @@
 
 .bsEvidenceOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$priorplan <- "impartial"
-  options$impartialCustomModeplan <- FALSE
-  options$aqlplan <- .05
-  options$rqlplan <- .15
-  options$min_bfplan <- 30
-  options$inferPosteriorinfer <- TRUE
-  options$data_ninfer <- 30
-  options$data_dinfer <- 0
-  options$lot_sizeinfer <- 100
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- FALSE
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$planningPriorDistribution <- "impartial"
+  options$planningPriorImpartialCustomLocation <- FALSE
+  options$planningAcceptableQualityLevel <- .05
+  options$planningRejectableQualityLevel <- .15
+  options$planningMinimumBayesFactor <- 30
+  options$inferenceUseData <- TRUE
+  options$inferenceSampleSize <- 30
+  options$inferenceObservedDefectives <- 0
+  options$inferenceLotSize <- 100
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- FALSE
   options
 }
 
@@ -68,7 +68,7 @@
 test_that("Bayesian sampling - changing the target updates status without changing evidence", {
   options <- .bsEvidenceOptionsForTest()
   observed <- .bsEvidenceSequenceForTest(options,
-                                        list(list(min_bfplan = 1000), list(min_bfplan = 30)))
+                                        list(list(planningMinimumBayesFactor = 1000), list(planningMinimumBayesFactor = 30)))
   expected_c <- c("1", "Not available", "1")
   expected_status <- c(
     "The selected Bayes-factor target of 30 has been reached.",
@@ -93,7 +93,7 @@ test_that("Bayesian sampling - changing the target updates status without changi
 test_that("Bayesian sampling - evidence descriptions follow data in both inference outputs", {
   options <- .bsEvidenceOptionsForTest()
   observed <- .bsEvidenceSequenceForTest(options,
-    lapply(c(1, 2, 4, 7, 8), function(d) list(data_dinfer = d)))
+    lapply(c(1, 2, 4, 7, 8), function(d) list(inferenceObservedDefectives = d)))
   expected_bf <- c(188.832, 31.223, 8.881, 1.478, .157, .069)
   expected_evidence <- c(
     "Strong evidence that the proportion defective is below the RQL.",
@@ -121,8 +121,8 @@ test_that("Bayesian sampling - evidence descriptions follow data in both inferen
 
 test_that("Bayesian sampling - posterior-only output reports evidence and the selected target", {
   options <- .bsEvidenceOptionsForTest()
-  options$showInferenceTableinfer <- FALSE
-  options$min_bfplan <- 1000
+  options$inferenceDecisionTable <- FALSE
+  options$planningMinimumBayesFactor <- 1000
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                   options = options, view = FALSE)
   collection <- .bsEvidenceCollectionForTest(result)
@@ -144,13 +144,13 @@ test_that("Bayesian sampling - posterior-only output reports evidence and the se
 
 test_that("Bayesian sampling - target comparison allows equality and explains targets below one", {
   low_target <- .bsEvidenceOptionsForTest()
-  low_target$data_dinfer <- 7
-  low_target$min_bfplan <- .1
+  low_target$inferenceObservedDefectives <- 7
+  low_target$planningMinimumBayesFactor <- .1
   equal_target <- .bsEvidenceOptionsForTest()
-  equal_target$priorplan <- "uniform"
-  equal_target$rqlplan <- .5
-  equal_target$data_ninfer <- 1
-  equal_target$min_bfplan <- 3
+  equal_target$planningPriorDistribution <- "uniform"
+  equal_target$planningRejectableQualityLevel <- .5
+  equal_target$inferenceSampleSize <- 1
+  equal_target$planningMinimumBayesFactor <- 3
   cases <- list(low_target, equal_target)
   expected_bf <- c(.157, 3)
   expected_c <- c("7", "0")

@@ -6,13 +6,13 @@
 .ssm_plot_boundary_run <- function(data, theta, beta = NULL, y_pred = NULL,
                                    predictors = character(), plots = character()) {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = predictors)
+  assignments <- list(defectCount = "count", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = predictors)
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- name %in% plots
   if (is.null(y_pred)) y_pred <- rep(tail(data$count, 1L), nrow(theta))
   ns <- asNamespace("jaspAcceptanceSampling")
@@ -48,7 +48,7 @@
 test_that("a single lot shows its posterior mean and interval", {
   theta <- matrix(seq(.01, .20, length.out = 1000), ncol = 1L)
   result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(), theta,
-                                  plots = "ssm_statePlot")
+                                  plots = "plotsStateTimeSeries")
   expect_identical(result$status, "complete")
   plot <- .ssm_plot_boundary_object(result, "ssm_statePlot")
   expect_s3_class(plot, "ggplot")
@@ -71,7 +71,7 @@ test_that("several lots retain their trajectory and uncertainty ribbon", {
                  seq(.10, .30, length.out = 1000),
                  seq(.20, .40, length.out = 1000))
   result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(3L), theta,
-                                  plots = "ssm_statePlot")
+                                  plots = "plotsStateTimeSeries")
   plot <- .ssm_plot_boundary_object(result, "ssm_statePlot")
   expect_s3_class(plot$layers[[1L]]$geom, "GeomRibbon")
   expect_s3_class(plot$layers[[2L]]$geom, "GeomLine")
@@ -85,7 +85,7 @@ test_that("constant defect-rate draws retain state output but cannot manufacture
   for (value in c(0, .05, 1)) {
     theta <- matrix(rep(value, 1000), ncol = 1L)
     result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(), theta,
-      plots = c("ssm_statePlot", "ssm_posteriorDistPlot"))
+      plots = c("plotsStateTimeSeries", "plotsLatestDefectRate"))
     expect_identical(result$status, "complete")
     expect_identical(result$results$summaryTable$status, "complete")
     state <- .ssm_plot_boundary_object(result, "ssm_statePlot")
@@ -109,7 +109,7 @@ test_that("predictive plots preserve unit mass at zero and after full inspection
     data$n <- counts[["n"]]
     data$s <- counts[["s"]]
     result <- .ssm_plot_boundary_run(data, matrix(seq(.01, .20, length.out = 1000), ncol = 1L),
-      y_pred = rep(counts[["y"]], 1000), plots = "ssm_predictionPlot")
+      y_pred = rep(counts[["y"]], 1000), plots = "plotsPosteriorPredictive")
     expect_identical(result$status, "complete")
     expect_equal(result$results$summaryTable$data[[1L]]$pred, counts[["y"]])
     plot <- .ssm_plot_boundary_object(result, "predPlot")
@@ -130,7 +130,7 @@ test_that("malformed coefficient arrays fail instead of being reshaped into dens
                   matrix(c(1, NA, 3, 4), ncol = 2L), matrix(c(1, Inf, 3, 4), ncol = 2L))
   for (beta in invalid) {
     result <- .ssm_plot_boundary_run(data, theta, beta = beta,
-      predictors = c("x1", "x2"), plots = "ssm_plotBeta")
+      predictors = c("x1", "x2"), plots = "plotsPredictorCoefficients")
     expect_identical(result$status, "complete")
     expect_identical(result$results$betaPlot$status, "error")
     expect_match(paste(unlist(result$results$betaPlot), collapse = " "),
@@ -144,7 +144,7 @@ test_that("constant coefficient draws retain their summary but cannot manufactur
   for (value in c(0, .5, -.5)) {
     beta <- cbind(seq(-.2, .2, length.out = 1000), rep(value, 1000))
     result <- .ssm_plot_boundary_run(data, theta, beta = beta,
-      predictors = c("x1", "x2"), plots = "ssm_plotBeta")
+      predictors = c("x1", "x2"), plots = "plotsPredictorCoefficients")
     expect_identical(result$status, "complete")
     expect_identical(result$results$predictorSummary$status, "complete")
     expect_equal(result$results$predictorSummary$data[[2L]]$mean, value)

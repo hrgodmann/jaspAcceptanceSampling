@@ -74,17 +74,17 @@ test_that("predictive plots retain empty bins and exact weights for sparse and c
     .asSSM_getStanModel = function(...) stop("Predictive plotting fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = character())
+  assignments <- list(defectCount = "y", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = character())
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("ssm_statePlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
-                 "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
+                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
-  options$ssm_predictionPlot <- TRUE
-  options$ssm_controlLimitsLower <- .025
-  options$ssm_controlLimitsUpper <- .1
+  options$plotsPosteriorPredictive <- TRUE
+  options$settingsAcceptableQualityLevel <- .025
+  options$settingsRejectableQualityLevel <- .1
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
   if (nrow(get(".asSSM_predictivePMF", ns)(c(0, 1), 100, 0, 0)) != 2L)

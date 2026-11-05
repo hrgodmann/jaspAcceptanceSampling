@@ -38,7 +38,7 @@ The organization of the analyses within the Acceptance Sampling module in JASP i
 
 **Bayesian Planning and Inference:** Plan acceptance sampling studies using Beta-Binomial models with customizable priors (uniform, custom, impartial). Perform Bayesian inference on observed lot data with posterior updating, Bayes factor evidence assessment, and posterior predictive distributions.
 
-**Bayesian State-Space Model:** Track defect rates across lots with a two-component innovation mixture that allows ordinary variation and occasional larger changes. Supports multiple separately standardized numeric covariates, configurable priors, automatic computational diagnostics and prediction of the total defects in the current lot. See the [analysis help](inst/help/BayesianSSMforAS.md) for the model, decision rule and updating behavior.
+**Bayesian State-Space Model:** Track defect rates across lots with a two-component innovation mixture that allows ordinary variation and occasional larger changes. Supports multiple separately standardized numeric covariates, configurable priors, automatic computational diagnostics and prediction of the total defects in the current lot. Open the analysis help in JASP for the model, decision rule and updating behavior.
 
 **Visualization:** OC curves, AOQ curves, ATI curves, ASN curves for classical plans. Prior/posterior density plots, posterior predictive distributions, and state trajectory plots for Bayesian analyses.
 

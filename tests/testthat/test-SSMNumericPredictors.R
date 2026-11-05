@@ -8,8 +8,8 @@
 }
 
 .ssm_numeric_options <- function(predictors = character()) {
-  list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s", ssm_time = "lot",
-       ssm_predictor = predictors)
+  list(defectCount = "count", sampleSize = "n", lotSize = "s", lotNumber = "lot",
+       covariates = predictors)
 }
 
 .ssm_numeric_data <- function() {
@@ -98,7 +98,7 @@ test_that("sorting keeps all predictor values with their lot and never drops a r
 test_that("every selected predictor is checked for missing columns and numeric finite values", {
   api <- .ssm_numeric_api()
   options <- .ssm_numeric_options(c("x1", "x2", "x3"))
-  for (name in options$ssm_predictor) {
+  for (name in options$covariates) {
     missing <- .ssm_numeric_data()
     missing[[name]] <- NULL
     expect_match(api$validate(missing, options), "missing", ignore.case = TRUE)
@@ -213,25 +213,25 @@ test_that("two numeric predictors reach the coefficient table, density facets an
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- .ssm_numeric_options(c("x1", "x2"))
   for (name in names(assignments)) options[[name]] <- assignments[[name]]
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- TRUE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- TRUE
-  options$ssm_showMcmcSummary <- TRUE
-  options$ssm_showTheta <- FALSE
-  options$ssm_showSigma <- FALSE
-  options$ssm_showYpred <- FALSE
-  options$ssm_showBeta <- TRUE
-  options$ssm_printDiagnostics <- FALSE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- TRUE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- TRUE
+  options$mcmcDiagnosticsOverviewTable <- TRUE
+  options$mcmcDiagnosticsOverviewTheta <- FALSE
+  options$mcmcDiagnosticsOverviewSigma <- FALSE
+  options$mcmcDiagnosticsOverviewPrediction <- FALSE
+  options$mcmcDiagnosticsOverviewBeta <- TRUE
+  options$mcmcDiagnosticsPrint <- FALSE
 
   # This short chain tests output wiring, not convergence or parameter recovery.
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 42
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 42
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   data <- .ssm_numeric_data()
   csv <- tempfile(fileext = ".csv")
@@ -272,8 +272,8 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- .ssm_numeric_options(c("x1", "x2"))
   for (name in names(assignments)) options[[name]] <- assignments[[name]]
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
 
   captured <- NULL
@@ -342,7 +342,7 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
     beta <- fixture$draws[, fixtureNames, drop = FALSE]
     # Exercise the accepted legacy scalar-extraction shape as well as matrices.
     if (length(design$names) == 1L) beta <- as.numeric(beta)
-    y <- tail(dataset[[options$ssm_count]], 1L)
+    y <- tail(dataset[[options$defectCount]], 1L)
     jaspResults[["fit"]]$object <- list(
       samples = list(y_pred = y + c(0, 1, 1, 2, 2, 3),
                      beta_predictor = if (length(design$names)) beta else NULL),
@@ -355,8 +355,8 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- .ssm_numeric_options(predictors)
   options[names(assignments)] <- assignments
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
   options
 }

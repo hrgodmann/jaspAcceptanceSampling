@@ -16,7 +16,7 @@ test_that("BayesianSSMforAS runs without error", {
   # Load from JASP example file
   jaspFile <- testthat::test_path("..", "..", "examples", "BaySSM.jasp")
   opts <- jaspTools::analysisOptions(jaspFile)
-  opts$ssm_printDiagnostics <- TRUE
+  opts$mcmcDiagnosticsPrint <- TRUE
   dataset <- jaspTools::extractDatasetFromJASPFile(jaspFile)
 
   # Let the public runner encode the data and options.
@@ -31,10 +31,10 @@ test_that("BayesianSSMforAS runs without error", {
   expect_true(all(c("summaryTable", "samplerDiagnostics") %in% names(results$results)))
   expect_false("predPlotNote" %in% names(results$results))
 
-  lastLot <- dataset[which.max(dataset[[opts$ssm_time]]), , drop = FALSE]
+  lastLot <- dataset[which.max(dataset[[opts$lotNumber]]), , drop = FALSE]
   summary <- results$results$summaryTable$data[[1]]
-  expect_equal(summary$t, format(lastLot[[opts$ssm_time]], trim = TRUE, scientific = FALSE, digits = 15))
-  expect_equal(summary$y, lastLot[[opts$ssm_count]])
+  expect_equal(summary$t, format(lastLot[[opts$lotNumber]], trim = TRUE, scientific = FALSE, digits = 15))
+  expect_equal(summary$y, lastLot[[opts$defectCount]])
   expect_true(is.finite(summary$massAQL) && summary$massAQL >= 0 && summary$massAQL <= 1)
   expect_true(is.finite(summary$massRQL) && summary$massRQL >= 0 && summary$massRQL <= 1)
   expect_true(summary$decision %in% c("Consider to Accept", "Consider to Reject", "Consider to Continue"))

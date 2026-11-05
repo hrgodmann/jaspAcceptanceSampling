@@ -1,6 +1,6 @@
 .ssm_ordinal_options <- function() {
-  list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
-       ssm_time = "lot", ssm_predictor = "")
+  list(defectCount = "count", sampleSize = "n", lotSize = "s",
+       lotNumber = "lot", covariates = "")
 }
 
 .ssm_ordinal_data <- function() {
@@ -98,7 +98,7 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
     generations <<- generations + 1L
     state <- jaspBase::createJaspState()
     state$dependOn(get(".asSSM_fitDependencies", ns)())
-    state$object <- list(samples = list(y_pred = tail(dataset[[options$ssm_count]], 1L) + c(0, 1, 1, 2)))
+    state$object <- list(samples = list(y_pred = tail(dataset[[options$defectCount]], 1L) + c(0, 1, 1, 2)))
     jaspResults[["fit"]] <- state
   }
   # The normal preloaded runner, data reader, validator and table builder remain real.
@@ -112,10 +112,10 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- .ssm_ordinal_options()
   options[names(assignments)] <- assignments
-  for (name in c("ssm_count", "ssm_sampleSize", "ssm_total", "ssm_time"))
+  for (name in c("defectCount", "sampleSize", "lotSize", "lotNumber"))
     options[[name]] <- list(value = assignments[[name]], types = list("scale"))
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
 
   numeric <- .ssm_ordinal_data()
@@ -123,7 +123,7 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   ordinal$lot <- ordered(as.character(numeric$lot), levels = c("120", "40", "10"))
   # Exercise native input handling with both numeric and ordered lot labels.
   baseline <- jaspTools::runAnalysis("BayesianSSMforAS", numeric, options, view = FALSE)
-  options$ssm_time$types <- list("ordinal")
+  options$lotNumber$types <- list("ordinal")
   actual <- jaspTools::runAnalysis("BayesianSSMforAS", ordinal, options, view = FALSE)
   expect_identical(baseline$status, "complete")
   expect_identical(actual$status, "complete")

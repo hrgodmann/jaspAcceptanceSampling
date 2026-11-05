@@ -54,19 +54,19 @@ test_that("fully inspected Bayesian lots retain inclusive AQL and RQL boundaries
 
 test_that("Bayesian predictive probabilities, labels, summary and plot share count boundaries", {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorplan <- "uniform"
-  options$aqlplan <- .07
-  options$rqlplan <- .29
-  options$data_ninfer <- 20
-  options$data_dinfer <- 3
-  options$lot_sizeinfer <- 100
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$ppdPlotinfer <- TRUE
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$posteriorPlotinfer <- FALSE
-  options$showThreeBFplan <- FALSE
+  options$planningPriorDistribution <- "uniform"
+  options$planningAcceptableQualityLevel <- .07
+  options$planningRejectableQualityLevel <- .29
+  options$inferenceSampleSize <- 20
+  options$inferenceObservedDefectives <- 3
+  options$inferenceLotSize <- 100
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPredictivePlot <- TRUE
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$inferencePosteriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
 
   results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                     options = options, view = FALSE, quiet = TRUE)

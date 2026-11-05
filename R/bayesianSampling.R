@@ -33,25 +33,25 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 # Dependency helpers
 .bsPlanningDeps <- function() {
   c(
-    "max_nplan", "min_bfplan", "aqlplan", "rqlplan", "priorplan",
-    "alphaplan", "betaplan",
-    "impartialShapeplan", "impartialCustomModeplan", "impartialModeplan",
-    "impartialThreeConstraintplan",   # NEW
-    "showPlansplan", "priorPlotplan",
-    "showThreeBFplan"
+    "planningMaximumSampleSize", "planningMinimumBayesFactor", "planningAcceptableQualityLevel", "planningRejectableQualityLevel", "planningPriorDistribution",
+    "planningPriorAlpha", "planningPriorBeta",
+    "planningPriorImpartialShape", "planningPriorImpartialCustomLocation", "planningPriorImpartialLocation",
+    "planningPriorThreeRegionShapeConstraint",   # NEW
+    "planningPlansTable", "planningPriorPlot",
+    "planningThreeHypothesisBayesFactorTable"
   )
 }
 
 .bsInferenceDeps <- function() {
   c(
-    "inferPosteriorinfer",
+    "inferenceUseData",
 
-    "aqlplan", "rqlplan", "min_bfplan", "priorplan", "alphaplan", "betaplan",
-    "impartialShapeplan", "impartialCustomModeplan", "impartialModeplan",
-    "impartialThreeConstraintplan",
+    "planningAcceptableQualityLevel", "planningRejectableQualityLevel", "planningMinimumBayesFactor", "planningPriorDistribution", "planningPriorAlpha", "planningPriorBeta",
+    "planningPriorImpartialShape", "planningPriorImpartialCustomLocation", "planningPriorImpartialLocation",
+    "planningPriorThreeRegionShapeConstraint",
 
-    "data_ninfer", "data_dinfer", "lot_sizeinfer",
-    "showInferenceTableinfer", "posteriorPlotinfer", "ppdPlotinfer"
+    "inferenceSampleSize", "inferenceObservedDefectives", "inferenceLotSize",
+    "inferenceDecisionTable", "inferencePosteriorPlot", "inferencePosteriorPredictivePlot"
   )
 }
 
@@ -672,9 +672,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
       container[[name]]$setError(message)
     }
   }
-  addError("planTable", gettext("Sampling Plans"), 1, "showPlansplan")
+  addError("planTable", gettext("Sampling Plans"), 1, "planningPlansTable")
   addError("threeBFTable", gettext("Three-Hypothesis Bayes Factors (at d = c)"),
-           3, "showThreeBFplan")
+           3, "planningThreeHypothesisBayesFactorTable")
 }
 
 .bsInferenceError <- function(container, message, title = gettext("Inference"), name = "inputError") {
@@ -704,9 +704,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 # Section 1: Planning
 .bsPlanningAnalysis <- function(jaspResults, options, position) {
 
-  if (!isTRUE(options$showPlansplan) &&
-      !isTRUE(options$priorPlotplan) &&
-      !isTRUE(options$showThreeBFplan)) {
+  if (!isTRUE(options$planningPlansTable) &&
+      !isTRUE(options$planningPriorPlot) &&
+      !isTRUE(options$planningThreeHypothesisBayesFactorTable)) {
     return()
   }
 
@@ -726,10 +726,10 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     jaspResults[["planContainer"]] <- container
   }, add = TRUE)
 
-  aql    <- options$aqlplan
-  rql    <- options$rqlplan
-  max_n  <- options$max_nplan
-  min_bf <- options$min_bfplan
+  aql    <- options$planningAcceptableQualityLevel
+  rql    <- options$planningRejectableQualityLevel
+  max_n  <- options$planningMaximumSampleSize
+  min_bf <- options$planningMinimumBayesFactor
 
   if (!is.finite(aql) || !is.finite(rql) || aql <= 0 || rql <= 0 || aql >= rql || rql >= 1) {
     .bsPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = TRUE)
@@ -738,12 +738,12 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   priorParams <- tryCatch(
     .bsCalculatePriorParams(
-      options$priorplan, aql, rql,
-      options$alphaplan, options$betaplan,
-      impartialCustomMode = options$impartialCustomModeplan,
-      impartialMode = options$impartialModeplan,
-      impartialThreeConstraint = options$impartialThreeConstraintplan,
-      impartialShape = options$impartialShapeplan
+      options$planningPriorDistribution, aql, rql,
+      options$planningPriorAlpha, options$planningPriorBeta,
+      impartialCustomMode = options$planningPriorImpartialCustomLocation,
+      impartialMode = options$planningPriorImpartialLocation,
+      impartialThreeConstraint = options$planningPriorThreeRegionShapeConstraint,
+      impartialShape = options$planningPriorImpartialShape
     ),
     error = function(e) {
       .bsPriorError(container, conditionMessage(e), planning = TRUE)
@@ -763,13 +763,13 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   container[["priorError"]] <- NULL
 
-  if (isTRUE(options$priorPlotplan)) {
+  if (isTRUE(options$planningPriorPlot)) {
     .bsDistributionPlot(container, aql, rql, priorParams$alpha, priorParams$beta,
-                        "Prior", position = 2, base = "priorPlotplan")
+                        "Prior", position = 2, base = "planningPriorPlot")
   }
 
   # The prior is defined independently of the requested sampling plan.
-  if (!isTRUE(options$showPlansplan) && !isTRUE(options$showThreeBFplan))
+  if (!isTRUE(options$planningPlansTable) && !isTRUE(options$planningThreeHypothesisBayesFactorTable))
     return()
 
   if (!is.finite(max_n) || max_n <= 0) {
@@ -793,7 +793,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   plans <- tryCatch(jaspResults[["planData"]] %setOrRetrieve% (
     .bsGeneratePlans(aql, rql, max_n, min_bf,
                      priorParams$alpha, priorParams$beta,
-                     add_three_hyp = isTRUE(options$showThreeBFplan)) |>
+                     add_three_hyp = isTRUE(options$planningThreeHypothesisBayesFactorTable)) |>
       createJaspState(jaspDeps(.bsPlanningDeps()))
   ), error = function(e) {
     .bsPlanError(container, options, conditionMessage(e))
@@ -813,13 +813,13 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     return()
   }
 
-  if (isTRUE(options$showPlansplan)) {
-    .bsPlanTable(container, plans, position = 1, base = "showPlansplan",
+  if (isTRUE(options$planningPlansTable)) {
+    .bsPlanTable(container, plans, position = 1, base = "planningPlansTable",
                  rql = rql, alpha = priorParams$alpha, beta = priorParams$beta)
   }
 
-  if (isTRUE(options$showThreeBFplan)) {
-    .bsThreeBFTable(container, plans, position = 3, base = "showThreeBFplan",
+  if (isTRUE(options$planningThreeHypothesisBayesFactorTable)) {
+    .bsThreeBFTable(container, plans, position = 3, base = "planningThreeHypothesisBayesFactorTable",
                     aql = aql, rql = rql, alpha = priorParams$alpha, beta = priorParams$beta)
   }
 }
@@ -854,7 +854,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 # Section 2: Inference
 .bsInferenceAnalysis <- function(jaspResults, options, position) {
-  if (!isTRUE(options$inferPosteriorinfer))
+  if (!isTRUE(options$inferenceUseData))
     return()
 
   # Create/retrieve container + state
@@ -873,8 +873,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   }, add = TRUE)
 
   # Always use prior from planning stage
-  aql <- options$aqlplan
-  rql <- options$rqlplan
+  aql <- options$planningAcceptableQualityLevel
+  rql <- options$planningRejectableQualityLevel
   if (!is.finite(aql) || !is.finite(rql) || aql <= 0 || rql <= 0 || aql >= rql || rql >= 1) {
     .bsPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = FALSE)
     return()
@@ -882,12 +882,12 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   priorParams <- tryCatch(
     .bsCalculatePriorParams(
-      options$priorplan, aql, rql,
-      options$alphaplan, options$betaplan,
-      impartialCustomMode = options$impartialCustomModeplan,
-      impartialMode = options$impartialModeplan,
-      impartialThreeConstraint = options$impartialThreeConstraintplan,
-      impartialShape = options$impartialShapeplan
+      options$planningPriorDistribution, aql, rql,
+      options$planningPriorAlpha, options$planningPriorBeta,
+      impartialCustomMode = options$planningPriorImpartialCustomLocation,
+      impartialMode = options$planningPriorImpartialLocation,
+      impartialThreeConstraint = options$planningPriorThreeRegionShapeConstraint,
+      impartialShape = options$planningPriorImpartialShape
     ),
     error = function(e) {
       .bsPriorError(container, conditionMessage(e), planning = FALSE)
@@ -907,9 +907,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   container[["priorError"]] <- NULL
 
   # Data
-  n <- options$data_ninfer
-  d <- options$data_dinfer
-  min_bf <- options$min_bfplan
+  n <- options$inferenceSampleSize
+  d <- options$inferenceObservedDefectives
+  min_bf <- options$planningMinimumBayesFactor
 
   if (!is.finite(n) || !is.finite(d) || n < 0 || d < 0) {
     .bsInferenceError(container, gettext("Please ensure the data are valid: n >= 0 and 0 <= d <= n."))
@@ -932,7 +932,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   # Outputs
   # Lot size for PPD
-  N <- options$lot_sizeinfer
+  N <- options$inferenceLotSize
   if (!is.finite(N) || N < n) {
     .bsInferenceError(container, gettext("Lot size (N) must be at least as large as the sample size (n)."))
     return()
@@ -958,10 +958,10 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   bfInterpretation <- .bsBFEvidenceText(log_bf, evidence$tolerance)
   targetInterpretation <- .bsBFTargetText(log_bf, min_bf, evidence$tolerance)
 
-  if (isTRUE(options$showInferenceTableinfer)) {
+  if (isTRUE(options$inferenceDecisionTable)) {
     .bsInferenceDecisionTable(container, n, d, N, aql, rql,
                               log_bf, ppd, acceptanceNumber,
-                              position = 0, base = "showInferenceTableinfer")
+                              position = 0, base = "inferenceDecisionTable")
 
     # Evidence strength and the selected planning target are separate criteria.
     rql_count <- .bsCountLimit(rql, N)
@@ -982,9 +982,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     container[["decisionSummaryText"]] <- NULL
   }
 
-  if (isTRUE(options$posteriorPlotinfer)) {
+  if (isTRUE(options$inferencePosteriorPlot)) {
     .bsDistributionPlot(container, aql, rql, alpha_post, beta_post,
-                        "Posterior", position = 1, base = "posteriorPlotinfer",
+                        "Posterior", position = 1, base = "inferencePosteriorPlot",
                         alpha_prior = priorParams$alpha, beta_prior = priorParams$beta)
 
     bfText <- createJaspHtml(
@@ -1004,10 +1004,10 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     container[["bfText"]] <- NULL
   }
 
-  if (isTRUE(options$ppdPlotinfer)) {
+  if (isTRUE(options$inferencePosteriorPredictivePlot)) {
     .bsPPDPlot(container, n, d, N, aql, rql,
                alpha_post, beta_post,
-               position = 3, base = "ppdPlotinfer")
+               position = 3, base = "inferencePosteriorPredictivePlot")
   } else {
     container[["ppdPlot"]] <- NULL
   }
@@ -1016,7 +1016,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 
 # Tables
-.bsPlanTable <- function(container, plans, position, base = "showPlansplan",
+.bsPlanTable <- function(container, plans, position, base = "planningPlansTable",
                          rql, alpha, beta) {
 
 
@@ -1048,7 +1048,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 }
 
 
-.bsThreeBFTable <- function(container, plans, position, base = "showThreeBFplan",
+.bsThreeBFTable <- function(container, plans, position, base = "planningThreeHypothesisBayesFactorTable",
                             aql, rql, alpha, beta) {
 
   needed <- c("n", "c", "logBF_GB", "logBF_GM", "logBF_MB")
@@ -1336,8 +1336,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 .bsProcedure <- function(jaspResults, options, position) {
 
   # Retrieve values for dynamic text
-  aql <- options$aqlplan * 100
-  rql <- options$rqlplan * 100
+  aql <- options$planningAcceptableQualityLevel * 100
+  rql <- options$planningRejectableQualityLevel * 100
 
   container <- jaspResults[["procedureContainer"]] %setOrRetrieve%
     createJaspContainer(title = gettext("Procedure"))

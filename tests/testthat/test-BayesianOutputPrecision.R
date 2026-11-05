@@ -1,16 +1,16 @@
 test_that("Bayesian predictive plots label a fully inspected non-round count", {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorplan <- "uniform"
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- FALSE
-  options$posteriorPlotinfer <- FALSE
-  options$ppdPlotinfer <- TRUE
-  options$data_ninfer <- 100
-  options$data_dinfer <- 29
-  options$lot_sizeinfer <- 100
+  options$planningPriorDistribution <- "uniform"
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- FALSE
+  options$inferencePosteriorPlot <- FALSE
+  options$inferencePosteriorPredictivePlot <- TRUE
+  options$inferenceSampleSize <- 100
+  options$inferenceObservedDefectives <- 29
+  options$inferenceLotSize <- 100
 
   results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                     options = options, view = FALSE, quiet = TRUE)
@@ -46,19 +46,19 @@ test_that("Bayesian quality thresholds retain input precision in tables and text
   for (i in seq_len(nrow(cases))) {
     case <- cases[i, ]
     options <- jaspTools::analysisOptions("BayesianSampling")
-    options$priorplan <- "uniform"
-    options$aqlplan <- case$aql
-    options$rqlplan <- case$rql
-    options$showPlansplan <- FALSE
-    options$priorPlotplan <- FALSE
-    options$showThreeBFplan <- FALSE
-    options$inferPosteriorinfer <- TRUE
-    options$showInferenceTableinfer <- TRUE
-    options$posteriorPlotinfer <- TRUE
-    options$ppdPlotinfer <- FALSE
-    options$data_ninfer <- 30
-    options$data_dinfer <- 0
-    options$lot_sizeinfer <- 100
+    options$planningPriorDistribution <- "uniform"
+    options$planningAcceptableQualityLevel <- case$aql
+    options$planningRejectableQualityLevel <- case$rql
+    options$planningPlansTable <- FALSE
+    options$planningPriorPlot <- FALSE
+    options$planningThreeHypothesisBayesFactorTable <- FALSE
+    options$inferenceUseData <- TRUE
+    options$inferenceDecisionTable <- TRUE
+    options$inferencePosteriorPlot <- TRUE
+    options$inferencePosteriorPredictivePlot <- FALSE
+    options$inferenceSampleSize <- 30
+    options$inferenceObservedDefectives <- 0
+    options$inferenceLotSize <- 100
 
     results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                       options = options, view = FALSE, quiet = TRUE)

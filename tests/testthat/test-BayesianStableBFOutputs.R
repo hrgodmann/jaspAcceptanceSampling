@@ -2,23 +2,23 @@
 
 .bsStableBFOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$showPlansplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$priorplan <- "custom"
-  options$alphaplan <- 1
-  options$betaplan <- 100
-  options$aqlplan <- .05
-  options$rqlplan <- .5
-  options$min_bfplan <- 1.5
-  options$max_nplan <- 1
-  options$inferPosteriorinfer <- TRUE
-  options$data_ninfer <- 1
-  options$data_dinfer <- 0
-  options$lot_sizeinfer <- 100
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- FALSE
+  options$planningPlansTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$planningPriorDistribution <- "custom"
+  options$planningPriorAlpha <- 1
+  options$planningPriorBeta <- 100
+  options$planningAcceptableQualityLevel <- .05
+  options$planningRejectableQualityLevel <- .5
+  options$planningMinimumBayesFactor <- 1.5
+  options$planningMaximumSampleSize <- 1
+  options$inferenceUseData <- TRUE
+  options$inferenceSampleSize <- 1
+  options$inferenceObservedDefectives <- 0
+  options$inferenceLotSize <- 100
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- FALSE
   options
 }
 
@@ -78,8 +78,8 @@
 test_that("Bayesian sampling - extreme prior odds preserve finite evidence and acceptance numbers", {
   options <- .bsStableBFOptionsForTest()
   observed <- .bsStableBFSequenceForTest(options, list(
-    list(alphaplan = 100, betaplan = 1, data_dinfer = 1),
-    list(data_dinfer = 0)))
+    list(planningPriorAlpha = 100, planningPriorBeta = 1, inferenceObservedDefectives = 1),
+    list(inferenceObservedDefectives = 0)))
   # Beta(1,b) and Beta(a,1) give these limits analytically at RQL=.5.
   expected_bf <- c(2, .5, 51)
   for (i in seq_along(observed)) {
@@ -99,9 +99,9 @@ test_that("Bayesian sampling - extreme prior odds preserve finite evidence and a
 
 test_that("Bayesian sampling - prior tail saturation does not remove a valid planning row", {
   options <- .bsStableBFOptionsForTest()
-  options$inferPosteriorinfer <- FALSE
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
+  options$inferenceUseData <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                   options = options, view = FALSE)
   expect_identical(result$status, "complete")
@@ -137,10 +137,10 @@ test_that("Bayesian sampling - prior tail saturation does not remove a valid pla
 
 test_that("Bayesian sampling - infeasible plans report the actual maximum Bayes factor", {
   options <- .bsStableBFOptionsForTest()
-  options$inferPosteriorinfer <- FALSE
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
-  options$min_bfplan <- 3
+  options$inferenceUseData <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$planningMinimumBayesFactor <- 3
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                   options = options, view = FALSE)
   expect_identical(result$status, "complete")
@@ -158,12 +158,12 @@ test_that("Bayesian sampling - infeasible plans report the actual maximum Bayes 
 
 test_that("Bayesian sampling - overflowing and underflowing Bayes factors remain informative", {
   options <- .bsStableBFOptionsForTest()
-  options$priorplan <- "uniform"
-  options$data_ninfer <- 10000
-  options$lot_sizeinfer <- 10000
-  options$min_bfplan <- 30
+  options$planningPriorDistribution <- "uniform"
+  options$inferenceSampleSize <- 10000
+  options$inferenceLotSize <- 10000
+  options$planningMinimumBayesFactor <- 30
   observed <- .bsStableBFSequenceForTest(options,
-                                        list(list(data_dinfer = 10000), list(data_dinfer = 0)))
+                                        list(list(inferenceObservedDefectives = 10000), list(inferenceObservedDefectives = 0)))
   # Posterior odds are 2^(n+1)-1 at d=0, and their reciprocal at d=n.
   expected_log_bf <- c(1, -1, 1) * 10001 * log(2)
   for (i in seq_along(observed)) {
@@ -189,14 +189,14 @@ test_that("Bayesian sampling - overflowing and underflowing Bayes factors remain
 
 test_that("Bayesian sampling - three-region underflow neither drops plans nor prints zero Bayes factors", {
   options <- .bsStableBFOptionsForTest()
-  options$inferPosteriorinfer <- FALSE
-  options$priorplan <- "uniform"
-  options$aqlplan <- 1e-6
-  options$rqlplan <- .9
-  options$max_nplan <- 100
-  options$min_bfplan <- 30
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
+  options$inferenceUseData <- FALSE
+  options$planningPriorDistribution <- "uniform"
+  options$planningAcceptableQualityLevel <- 1e-6
+  options$planningRejectableQualityLevel <- .9
+  options$planningMaximumSampleSize <- 100
+  options$planningMinimumBayesFactor <- 30
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
   reference_rows <- lapply(seq_len(100), function(n) {
     d <- 0:n
     log_bf <- pbeta(.9, d + 1, n - d + 1, log.p = TRUE) -
@@ -253,9 +253,9 @@ test_that("Bayesian sampling - three-region underflow neither drops plans nor pr
 
 test_that("Bayesian sampling - cached pre-logarithmic plans are recomputed", {
   options <- .bsStableBFOptionsForTest()
-  options$inferPosteriorinfer <- FALSE
-  options$showPlansplan <- TRUE
-  options$min_bfplan <- .75
+  options$inferenceUseData <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningMinimumBayesFactor <- .75
   ns <- asNamespace("jaspAcceptanceSampling")
   original <- get(".bsPlanningAnalysis", ns)
   original_generator <- get(".bsGeneratePlans", ns)
@@ -298,13 +298,13 @@ test_that("Bayesian sampling - cached pre-logarithmic plans are recomputed", {
 test_that("Bayesian sampling - tiny representable and subnormal Bayes factors use suitable columns", {
   for (max_n in c(30L, 70L)) {
     options <- .bsStableBFOptionsForTest()
-    options$inferPosteriorinfer <- FALSE
-    options$priorplan <- "uniform"
-    options$aqlplan <- 1e-6
-    options$rqlplan <- .9
-    options$max_nplan <- max_n
-    options$min_bfplan <- 30
-    options$showThreeBFplan <- TRUE
+    options$inferenceUseData <- FALSE
+    options$planningPriorDistribution <- "uniform"
+    options$planningAcceptableQualityLevel <- 1e-6
+    options$planningRejectableQualityLevel <- .9
+    options$planningMaximumSampleSize <- max_n
+    options$planningMinimumBayesFactor <- 30
+    options$planningThreeHypothesisBayesFactorTable <- TRUE
     result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                     options = options, view = FALSE)
     expect_identical(result$status, "complete")
@@ -343,10 +343,10 @@ test_that("Bayesian sampling - tiny representable and subnormal Bayes factors us
 
 test_that("Bayesian sampling - numerical planning failures remain explicit and preserve the prior", {
   options <- .bsStableBFOptionsForTest()
-  options$inferPosteriorinfer <- FALSE
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
-  options$priorPlotplan <- TRUE
+  options$inferenceUseData <- FALSE
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$planningPriorPlot <- TRUE
   original_binary <- get(".bsLogBF", asNamespace("jaspAcceptanceSampling"))
   original_three <- get(".bsLogBFThreeHyp", asNamespace("jaspAcceptanceSampling"))
   failure <- function(...) jaspAcceptanceSampling:::.bsNumericalError()
@@ -375,7 +375,7 @@ test_that("Bayesian sampling - numerical planning failures remain explicit and p
 
 test_that("Bayesian sampling - numerical inference errors are visible and recover without stale output", {
   options <- .bsStableBFOptionsForTest()
-  options$data_dinfer <- 1
+  options$inferenceObservedDefectives <- 1
   ns <- asNamespace("jaspAcceptanceSampling")
   original <- get(".bsInferenceAnalysis", ns)
   original_binary <- get(".bsLogBF", ns)
@@ -397,7 +397,7 @@ test_that("Bayesian sampling - numerical inference errors are visible and recove
     observed[[1L]] <<- readCollection()
     for (i in seq_along(c(FALSE, TRUE, FALSE))) {
       fail_now <<- c(FALSE, TRUE, FALSE)[i]
-      options$data_dinfer <- if (fail_now) 1 else 0
+      options$inferenceObservedDefectives <- if (fail_now) 1 else 0
       private$changeOptions(as.character(jsonlite::toJSON(options)))
       jaspBase:::emptyRecomputed()
       original(jaspResults, options, position)

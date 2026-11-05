@@ -50,9 +50,9 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   T_idx <- nrow(dataset)
   predictiveError <- tryCatch({
     .asSSM_predictivePMF(jaspResults[["fit"]]$object$samples$y_pred,
-      dataset[[options[["ssm_total"]]]][T_idx],
-      dataset[[options[["ssm_sampleSize"]]]][T_idx],
-      dataset[[options[["ssm_count"]]]][T_idx])
+      dataset[[options[["lotSize"]]]][T_idx],
+      dataset[[options[["sampleSize"]]]][T_idx],
+      dataset[[options[["defectCount"]]]][T_idx])
     NULL
   }, error = function(e) conditionMessage(e))
   if (!is.null(predictiveError)) {
@@ -65,22 +65,22 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   .asSSM_createPredictorSummaryTable(jaspResults, options)
   .asSSM_createMcmcSummaryTable(jaspResults, dataset, options)
 
-  if (isTRUE(options[["ssm_statePlot"]]))
+  if (isTRUE(options[["plotsStateTimeSeries"]]))
     .asSSM_plotState(jaspResults, dataset, options)
   else
     jaspResults[["ssm_statePlot"]] <- NULL
 
-  if (isTRUE(options[["ssm_posteriorDistPlot"]]))
+  if (isTRUE(options[["plotsLatestDefectRate"]]))
     .asSSM_plotPosteriorDist(jaspResults, dataset, options)
   else
     jaspResults[["postDist"]] <- NULL
 
-  if (isTRUE(options[["ssm_predictionPlot"]]))
+  if (isTRUE(options[["plotsPosteriorPredictive"]]))
     .asSSM_plotPrediction(jaspResults, dataset, options)
   else
     jaspResults[["predPlot"]] <- NULL
 
-  if (length(.asSSM_predictorNames(options)) && isTRUE(options[["ssm_plotBeta"]]))
+  if (length(.asSSM_predictorNames(options)) && isTRUE(options[["plotsPredictorCoefficients"]]))
     .asSSM_plotBetaCoefficient(jaspResults, dataset, options)
   else
     jaspResults[["betaPlot"]] <- NULL
@@ -103,40 +103,40 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 }
 
 .asSSMReady <- function(options, dataset) {
-  if (options[["ssm_count"]] == "" || options[["ssm_total"]] == "" ||
-      options[["ssm_sampleSize"]] == "" || options[["ssm_time"]] == "") return(FALSE)
+  if (options[["defectCount"]] == "" || options[["lotSize"]] == "" ||
+      options[["sampleSize"]] == "" || options[["lotNumber"]] == "") return(FALSE)
   return(TRUE)
 }
 
 .asSSM_readData <- function(dataset, options) {
 
-  if (options[["ssm_count"]] == "" ||
-      options[["ssm_total"]] == "" ||
-      options[["ssm_sampleSize"]] == "" ||
-      options[["ssm_time"]] == "") {
+  if (options[["defectCount"]] == "" ||
+      options[["lotSize"]] == "" ||
+      options[["sampleSize"]] == "" ||
+      options[["lotNumber"]] == "") {
     return(dataset)
   }
 
   colsNumeric <- c()
-  if (options[["ssm_count"]]      != "") colsNumeric <- c(colsNumeric, options[["ssm_count"]])
-  if (options[["ssm_total"]]      != "") colsNumeric <- c(colsNumeric, options[["ssm_total"]])
-  if (options[["ssm_sampleSize"]] != "") colsNumeric <- c(colsNumeric, options[["ssm_sampleSize"]])
-  if (options[["ssm_time"]]       != "") colsNumeric <- c(colsNumeric, options[["ssm_time"]])
+  if (options[["defectCount"]]      != "") colsNumeric <- c(colsNumeric, options[["defectCount"]])
+  if (options[["lotSize"]]      != "") colsNumeric <- c(colsNumeric, options[["lotSize"]])
+  if (options[["sampleSize"]] != "") colsNumeric <- c(colsNumeric, options[["sampleSize"]])
+  if (options[["lotNumber"]]       != "") colsNumeric <- c(colsNumeric, options[["lotNumber"]])
   colsNumeric <- unique(c(colsNumeric, .asSSM_predictorNames(options)))
 
   if (is.null(dataset)) {
     dataset <- .readDataSetToEnd(columns.as.numeric = colsNumeric)
   }
 
-  if (!is.null(dataset) && options[["ssm_time"]] != "" && options[["ssm_time"]] %in% colnames(dataset)) {
-    lot <- dataset[[options[["ssm_time"]]]]
+  if (!is.null(dataset) && options[["lotNumber"]] != "" && options[["lotNumber"]] %in% colnames(dataset)) {
+    lot <- dataset[[options[["lotNumber"]]]]
     if (is.ordered(lot)) {
       # Preloaded Ordinal columns are ordered factors: preserve labels, not level codes.
       numericLot <- suppressWarnings(as.numeric(as.character(lot)))
       if (all(is.na(lot) | !is.na(numericLot)))
-        dataset[[options[["ssm_time"]]]] <- numericLot
+        dataset[[options[["lotNumber"]]]] <- numericLot
     }
-    dataset <- dataset[order(dataset[[options[["ssm_time"]]]]), , drop = FALSE]
+    dataset <- dataset[order(dataset[[options[["lotNumber"]]]]), , drop = FALSE]
   }
 
   return(dataset)
@@ -154,10 +154,10 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   predictors <- .asSSM_predictorNames(options)
   usePredictor <- length(predictors) > 0L
   requiredCols <- c(
-    options[["ssm_count"]],
-    options[["ssm_sampleSize"]],
-    options[["ssm_total"]],
-    options[["ssm_time"]]
+    options[["defectCount"]],
+    options[["sampleSize"]],
+    options[["lotSize"]],
+    options[["lotNumber"]]
   )
   if (usePredictor)
     requiredCols <- c(requiredCols, predictors)
@@ -171,10 +171,10 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     ))
   }
 
-  count <- dataset[[options[["ssm_count"]]]]
-  sampleSize <- dataset[[options[["ssm_sampleSize"]]]]
-  lotSize <- dataset[[options[["ssm_total"]]]]
-  time <- dataset[[options[["ssm_time"]]]]
+  count <- dataset[[options[["defectCount"]]]]
+  sampleSize <- dataset[[options[["sampleSize"]]]]
+  lotSize <- dataset[[options[["lotSize"]]]]
+  time <- dataset[[options[["lotNumber"]]]]
 
   validateNumeric <- function(x, label, mustBeWhole = FALSE, mustBeNonNegative = FALSE) {
     if (!is.numeric(x) || is.complex(x)) {
@@ -247,14 +247,14 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
 .asSSM_fitDependencies <- function() {
   c(
-    "ssm_count", "ssm_total", "ssm_sampleSize", "ssm_time",
-    "ssm_predictor",
-    "ssm_priorTheta1Shape1", "ssm_priorTheta1Shape2",
-    "ssm_priorSigmaSD", "ssm_priorBetaScale",
-    "ssm_advancedMcmcBurnin",
-    "ssm_advancedMcmcChains", "ssm_advancedMcmcSamples",
-    "ssm_advancedMcmcThin", "ssm_advancedMcmcSeed",
-    "ssm_advancedMcmcAdaptDelta", "ssm_advancedMcmcMaxTreeDepth"
+    "defectCount", "lotSize", "sampleSize", "lotNumber",
+    "covariates",
+    "modelInitialBaselineAlpha", "modelInitialBaselineBeta",
+    "modelInnovationPriorScale", "modelPredictorCauchyScale",
+    "advancedMcmcBurnin",
+    "advancedMcmcChains", "advancedMcmcSamples",
+    "advancedMcmcThin", "advancedMcmcSeed",
+    "advancedMcmcAdaptDelta", "advancedMcmcMaxTreeDepth"
   )
 }
 
@@ -276,12 +276,12 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
   stanData <- list(
     T = nrow(dataset),
-    n = array(as.integer(dataset[[options[["ssm_sampleSize"]]]]), dim = nrow(dataset)),  # tested items
-    s = array(as.integer(dataset[[options[["ssm_total"]]]]), dim = nrow(dataset)),       # lot size
-    y = array(as.integer(dataset[[options[["ssm_count"]]]]), dim = nrow(dataset)),       # defects in sample
-    prior_theta1_a = options[["ssm_priorTheta1Shape1"]],
-    prior_theta1_b = options[["ssm_priorTheta1Shape2"]],
-    prior_sigma_sd = options[["ssm_priorSigmaSD"]]
+    n = array(as.integer(dataset[[options[["sampleSize"]]]]), dim = nrow(dataset)),  # tested items
+    s = array(as.integer(dataset[[options[["lotSize"]]]]), dim = nrow(dataset)),       # lot size
+    y = array(as.integer(dataset[[options[["defectCount"]]]]), dim = nrow(dataset)),       # defects in sample
+    prior_theta1_a = options[["modelInitialBaselineAlpha"]],
+    prior_theta1_b = options[["modelInitialBaselineBeta"]],
+    prior_sigma_sd = options[["modelInnovationPriorScale"]]
   )
 
   design <- .asSSM_predictorDesign(dataset, options)
@@ -290,7 +290,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   if (usePredictor) {
     stanData$K <- ncol(design$X)
     stanData$X <- design$X
-    stanData$prior_beta_scale <- options[["ssm_priorBetaScale"]]
+    stanData$prior_beta_scale <- options[["modelPredictorCauchyScale"]]
     modelName <- "complex"
   } else {
     modelName <- "simple"
@@ -298,8 +298,8 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
   fitInputs <- list(
     data = stanData, predictors = design,
-    lots = dataset[[options[["ssm_time"]]]],
-    settings = options[grep("^ssm_advancedMcmc", .asSSM_fitDependencies(), value = TRUE)]
+    lots = dataset[[options[["lotNumber"]]]],
+    settings = options[grep("^advancedMcmc", .asSSM_fitDependencies(), value = TRUE)]
   )
   cachedFit <- jaspResults[["fit"]]$object
   if (!is.null(cachedFit)) {
@@ -326,10 +326,10 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     position = 0, dependencies = .asSSM_fitDependencies()
   )
 
-  thisSeed  <- options[["ssm_advancedMcmcSeed"]]
-  thisDelta <- options[["ssm_advancedMcmcAdaptDelta"]]
-  thisDepth <- options[["ssm_advancedMcmcMaxTreeDepth"]]
-  thisChains <- as.integer(options[["ssm_advancedMcmcChains"]])
+  thisSeed  <- options[["advancedMcmcSeed"]]
+  thisDelta <- options[["advancedMcmcAdaptDelta"]]
+  thisDepth <- options[["advancedMcmcMaxTreeDepth"]]
+  thisChains <- as.integer(options[["advancedMcmcChains"]])
 
   availableCores <- suppressWarnings(parallel::detectCores())
   if (!is.finite(availableCores) || availableCores < 1)
@@ -354,9 +354,9 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
       data       = stanData,
       init       = .asSSM_mixtureInit(stanData, thisChains, predictor = usePredictor),
       chains     = thisChains,
-      iter       = options[["ssm_advancedMcmcBurnin"]] + options[["ssm_advancedMcmcSamples"]],
-      warmup     = options[["ssm_advancedMcmcBurnin"]],
-      thin       = options[["ssm_advancedMcmcThin"]],
+      iter       = options[["advancedMcmcBurnin"]] + options[["advancedMcmcSamples"]],
+      warmup     = options[["advancedMcmcBurnin"]],
+      thin       = options[["advancedMcmcThin"]],
       cores      = thisCores,
       refresh    = 0,
       seed       = thisSeed,
@@ -370,7 +370,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     maxTreedepth <- if (is.null(controlList$max_treedepth)) 10L else controlList$max_treedepth
     diagnostics <- tryCatch(
       .asSSM_extractDiagnostics(stanFit, stanData$T, usePredictor, maxTreedepth,
-                               options[["ssm_advancedMcmcThin"]], thisChains),
+                               options[["advancedMcmcThin"]], thisChains),
       error = function(e) list(error = conditionMessage(e))
     )
 
@@ -397,7 +397,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     table <- createJaspTable(title = gettext("Posterior Summary (Current Lot)"))
     table$dependOn(c(
       .asSSM_fitDependencies(),
-      "ssm_controlLimitsLower", "ssm_controlLimitsUpper", "ssm_decisionAcceptThreshold", "ssm_decisionRejectThreshold"
+      "settingsAcceptableQualityLevel", "settingsRejectableQualityLevel", "settingsAcceptanceThreshold", "settingsRejectionThreshold"
     ))
     table$position <- 0
 
@@ -426,10 +426,10 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   samples <- fit$object$samples
 
   T_idx <- nrow(dataset)
-  tT <- dataset[[options[["ssm_time"]]]][T_idx]
-  sT <- dataset[[options[["ssm_total"]]]][T_idx]        # total lot size
-  nT <- dataset[[options[["ssm_sampleSize"]]]][T_idx]   # sample size
-  yT <- dataset[[options[["ssm_count"]]]][T_idx]
+  tT <- dataset[[options[["lotNumber"]]]][T_idx]
+  sT <- dataset[[options[["lotSize"]]]][T_idx]        # total lot size
+  nT <- dataset[[options[["sampleSize"]]]][T_idx]   # sample size
+  yT <- dataset[[options[["defectCount"]]]][T_idx]
 
   if (is.na(tT) || is.na(sT) || is.na(yT)) {
     table$setError(gettext("The Lot Number, Lot Size, or Defect Count is missing (NA) for the last lot."))
@@ -439,15 +439,15 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   y_pred <- samples$y_pred
   pmf <- .asSSM_predictivePMF(y_pred, sT, nT, yT)
 
-  limit_AQL <- .asSSM_countLimit(options[["ssm_controlLimitsLower"]], sT)
-  limit_RQL <- .asSSM_countLimit(options[["ssm_controlLimitsUpper"]], sT)
+  limit_AQL <- .asSSM_countLimit(options[["settingsAcceptableQualityLevel"]], sT)
+  limit_RQL <- .asSSM_countLimit(options[["settingsRejectableQualityLevel"]], sT)
 
   # Tally membership before division so exact empirical threshold ties remain ties.
   mass_below_AQL <- sum(y_pred < limit_AQL) / length(y_pred)
   mass_above_RQL <- sum(y_pred > limit_RQL) / length(y_pred)
 
-  acceptThreshold <- options[["ssm_decisionAcceptThreshold"]]
-  rejectThreshold <- options[["ssm_decisionRejectThreshold"]]
+  acceptThreshold <- options[["settingsAcceptanceThreshold"]]
+  rejectThreshold <- options[["settingsRejectionThreshold"]]
   acceptPercent <- format(100 * acceptThreshold, trim = TRUE, scientific = FALSE, digits = 10)
   rejectPercent <- format(100 * rejectThreshold, trim = TRUE, scientific = FALSE, digits = 10)
 
@@ -529,7 +529,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     plot <- createJaspPlot(title = gettext("Defect Rate Over Time"), width = 600, height = 400)
     plot$dependOn(c(
       .asSSM_fitDependencies(),
-      "ssm_statePlot"
+      "plotsStateTimeSeries"
     ))
     plot$position <- 1
     jaspResults[["ssm_statePlot"]] <- plot
@@ -539,7 +539,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
   samples <- jaspResults[["fit"]]$object$samples
   theta <- samples$theta * 100
-  timeValues <- dataset[[options[["ssm_time"]]]]
+  timeValues <- dataset[[options[["lotNumber"]]]]
 
   df <- data.frame(
     time  = timeValues,
@@ -578,8 +578,8 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 }
 
 .asSSM_plotPrediction <- function(jaspResults, dataset, options) {
-  depVars <- c(.asSSM_fitDependencies(), "ssm_predictionPlot",
-               "ssm_controlLimitsLower", "ssm_controlLimitsUpper")
+  depVars <- c(.asSSM_fitDependencies(), "plotsPosteriorPredictive",
+               "settingsAcceptableQualityLevel", "settingsRejectableQualityLevel")
 
   plot <- jaspResults[["predPlot"]]
   if (is.null(plot)) {
@@ -594,13 +594,13 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   samples <- jaspResults[["fit"]]$object$samples
   y_pred <- samples$y_pred
 
-  sT <- dataset[[options[["ssm_total"]]]][nrow(dataset)]
-  nT <- dataset[[options[["ssm_sampleSize"]]]][nrow(dataset)]
-  yT <- dataset[[options[["ssm_count"]]]][nrow(dataset)]
+  sT <- dataset[[options[["lotSize"]]]][nrow(dataset)]
+  nT <- dataset[[options[["sampleSize"]]]][nrow(dataset)]
+  yT <- dataset[[options[["defectCount"]]]][nrow(dataset)]
   pmf <- .asSSM_predictivePMF(y_pred, sT, nT, yT)
 
-  limit_AQL <- .asSSM_countLimit(options[["ssm_controlLimitsLower"]], sT)
-  limit_RQL <- .asSSM_countLimit(options[["ssm_controlLimitsUpper"]], sT)
+  limit_AQL <- .asSSM_countLimit(options[["settingsAcceptableQualityLevel"]], sT)
+  limit_RQL <- .asSSM_countLimit(options[["settingsRejectableQualityLevel"]], sT)
 
   # Posterior probabilities for AQL / RQL regions
   # Tally membership before division so exact empirical threshold ties remain ties.
@@ -679,7 +679,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     plot <- createJaspPlot(title = gettext("Posterior Defect Rate"), width = 500, height = 400)
     plot$dependOn(c(
       .asSSM_fitDependencies(),
-      "ssm_posteriorDistPlot"
+      "plotsLatestDefectRate"
     ))
     plot$position <- 3
     jaspResults[["postDist"]] <- plot
@@ -727,7 +727,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
                           width = 500, height = 350 * number)
     plot$dependOn(c(
       .asSSM_fitDependencies(),
-      "ssm_plotBeta"
+      "plotsPredictorCoefficients"
     ))
 
     plot$position <- 4
@@ -844,7 +844,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
 
 .asSSM_createMcmcSummaryTable <- function(jaspResults, dataset, options) {
 
-  if (!isTRUE(options[["ssm_showMcmcSummary"]])) {
+  if (!isTRUE(options[["mcmcDiagnosticsOverviewTable"]])) {
     jaspResults[["mcmcSummary"]] <- NULL
     return()
   }
@@ -854,7 +854,7 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
     table <- createJaspTable(title = gettext("MCMC Diagnostics"))
     table$dependOn(c(
       .asSSM_fitDependencies(),
-      "ssm_showMcmcSummary", "ssm_showTheta", "ssm_showSigma", "ssm_showYpred", "ssm_showBeta"
+      "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsOverviewTheta", "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta"
     ))
     table$addColumnInfo(name = "parameter", title = gettext("Parameter"), type = "string")
     table$addColumnInfo(name = "mean",      title = gettext("Mean"),      type = "number")
@@ -884,18 +884,18 @@ bayesianSSMforASInternal <- function(jaspResults, dataset = NULL, options) {
   allNames <- rownames(sm)
   pars <- character(0)
 
-  if (isTRUE(options[["ssm_showTheta"]])) {
+  if (isTRUE(options[["mcmcDiagnosticsOverviewTheta"]])) {
     pars <- c(pars, grep("^theta\\[", allNames, value = TRUE))
   }
-  if (isTRUE(options[["ssm_showSigma"]])) {
+  if (isTRUE(options[["mcmcDiagnosticsOverviewSigma"]])) {
     if ("sigma_eta" %in% allNames)
       pars <- c(pars, "sigma_eta")
   }
-  if (isTRUE(options[["ssm_showYpred"]])) {
+  if (isTRUE(options[["mcmcDiagnosticsOverviewPrediction"]])) {
     if ("y_pred" %in% allNames)
       pars <- c(pars, "y_pred")
   }
-  if (length(.asSSM_predictorNames(options)) && isTRUE(options[["ssm_showBeta"]])) {
+  if (length(.asSSM_predictorNames(options)) && isTRUE(options[["mcmcDiagnosticsOverviewBeta"]])) {
     pars <- c(pars, grep("^beta_predictor\\[[0-9]+\\]$", allNames, value = TRUE))
   }
 

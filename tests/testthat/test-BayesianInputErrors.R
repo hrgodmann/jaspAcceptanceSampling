@@ -1,13 +1,13 @@
 # Invalid inputs must produce visible errors and recover in the real result engine.
 .bsInputErrorOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$showPlansplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$priorPlotplan <- FALSE
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- TRUE
-  options$ppdPlotinfer <- TRUE
+  options$planningPlansTable <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$planningPriorPlot <- FALSE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- TRUE
+  options$inferencePosteriorPredictivePlot <- TRUE
   options
 }
 
@@ -53,7 +53,7 @@
 }
 
 test_that("Bayesian sampling - invalid counts and BF targets are rejected by the QML input bounds", {
-  cases <- c(data_ninfer = -1, data_dinfer = -1, min_bfplan = 0)
+  cases <- c(inferenceSampleSize = -1, inferenceObservedDefectives = -1, planningMinimumBayesFactor = 0)
   for (option in names(cases)) {
     options <- .bsInputErrorOptionsForTest()
     options[[option]] <- unname(cases[[option]])
@@ -65,8 +65,8 @@ test_that("Bayesian sampling - invalid counts and BF targets are rejected by the
 
 test_that("Bayesian sampling - inconsistent data and lot sizes show visible errors", {
   cases <- list(
-    list(change = list(data_dinfer = 31), message = "The observed number of defectives (d) cannot exceed the sample size (n)"),
-    list(change = list(lot_sizeinfer = 29), message = "Lot size (N) must be at least"))
+    list(change = list(inferenceObservedDefectives = 31), message = "The observed number of defectives (d) cannot exceed the sample size (n)"),
+    list(change = list(inferenceLotSize = 29), message = "Lot size (N) must be at least"))
   for (case in cases) {
     options <- .bsInputErrorOptionsForTest()
     options[names(case$change)] <- case$change
@@ -79,12 +79,12 @@ test_that("Bayesian sampling - inconsistent data and lot sizes show visible erro
 test_that("Bayesian sampling - corrected inputs replace errors with current tables, HTML, and plots", {
   options <- .bsInputErrorOptionsForTest()
   observed <- .bsInputErrorSequenceForTest(options, list(
-    list(data_dinfer = 31),
-    list(data_ninfer = 40, data_dinfer = 2),
-    list(lot_sizeinfer = 39),
-    list(lot_sizeinfer = 150),
-    list(min_bfplan = 0),
-    list(min_bfplan = 10)))
+    list(inferenceObservedDefectives = 31),
+    list(inferenceSampleSize = 40, inferenceObservedDefectives = 2),
+    list(inferenceLotSize = 39),
+    list(inferenceLotSize = 150),
+    list(planningMinimumBayesFactor = 0),
+    list(planningMinimumBayesFactor = 10)))
   messages <- c("The observed number of defectives (d) cannot exceed the sample size (n)", "Lot size (N) must be at least", "minimum Bayes factor (> 0)")
   for (j in seq_along(messages))
     .bsExpectInputErrorForTest(.bsInputErrorCollectionForTest(observed[[2L * j]]), messages[j])
@@ -104,10 +104,10 @@ test_that("Bayesian sampling - corrected inputs replace errors with current tabl
     }
   }
   # Recovery must represent the new data, rather than merely remove the error banner.
-  options$data_ninfer <- 40
-  options$data_dinfer <- 2
-  options$lot_sizeinfer <- 150
-  options$min_bfplan <- 10
+  options$inferenceSampleSize <- 40
+  options$inferenceObservedDefectives <- 2
+  options$inferenceLotSize <- 150
+  options$planningMinimumBayesFactor <- 10
   fresh <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(fresh$status, "complete")
   final <- .bsInputErrorCollectionForTest(observed[[7L]])
@@ -123,11 +123,11 @@ test_that("Bayesian sampling - corrected inputs replace errors with current tabl
 
 test_that("Bayesian sampling - changing between input and prior errors removes the previous message", {
   options <- .bsInputErrorOptionsForTest()
-  options$data_dinfer <- 31
+  options$inferenceObservedDefectives <- 31
   observed <- .bsInputErrorSequenceForTest(options, list(
-    list(aqlplan = .2),
-    list(aqlplan = .05),
-    list(data_dinfer = 0)))
+    list(planningAcceptableQualityLevel = .2),
+    list(planningAcceptableQualityLevel = .05),
+    list(inferenceObservedDefectives = 0)))
   for (i in c(1L, 3L))
     .bsExpectInputErrorForTest(.bsInputErrorCollectionForTest(observed[[i]]), "The observed number of defectives (d) cannot exceed the sample size (n)")
   prior_failure <- .bsInputErrorCollectionForTest(observed[[2L]])
@@ -168,9 +168,9 @@ test_that("Bayesian sampling - legacy parent-container errors refresh without lo
       observed[[3L]] <<- capture()
     }
     options <- .bsInputErrorOptionsForTest()
-    options$showPlansplan <- section == "planning"
-    options$showThreeBFplan <- section == "planning"
-    options$priorPlotplan <- section == "planning"
+    options$planningPlansTable <- section == "planning"
+    options$planningThreeHypothesisBayesFactorTable <- section == "planning"
+    options$planningPriorPlot <- section == "planning"
     bindings <- setNames(list(wrapper), builder_name)
     result <- do.call(testthat::with_mocked_bindings, c(list(
       quote(jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE))),
@@ -200,19 +200,19 @@ test_that("Bayesian sampling - legacy parent-container errors refresh without lo
 
 test_that("Bayesian sampling - inconsistent counts recover by correcting either entered value", {
   options <- .bsInputErrorOptionsForTest()
-  options$priorplan <- "uniform"
-  options$data_ninfer <- 100
-  options$data_dinfer <- 29
-  options$lot_sizeinfer <- 200
+  options$planningPriorDistribution <- "uniform"
+  options$inferenceSampleSize <- 100
+  options$inferenceObservedDefectives <- 29
+  options$inferenceLotSize <- 200
   observed <- .bsInputErrorSequenceForTest(options, list(
-    list(data_dinfer = 101),
-    list(data_dinfer = 29),
-    list(data_dinfer = 101),
-    list(data_ninfer = 101),
-    list(lot_sizeinfer = 100),
-    list(lot_sizeinfer = 200),
-    list(data_ninfer = 100),
-    list(data_ninfer = 101)))
+    list(inferenceObservedDefectives = 101),
+    list(inferenceObservedDefectives = 29),
+    list(inferenceObservedDefectives = 101),
+    list(inferenceSampleSize = 101),
+    list(inferenceLotSize = 100),
+    list(inferenceLotSize = 200),
+    list(inferenceSampleSize = 100),
+    list(inferenceSampleSize = 101)))
   for (i in c(2L, 4L, 8L)) {
     .bsExpectInputErrorForTest(.bsInputErrorCollectionForTest(observed[[i]]),
       "The observed number of defectives (d) cannot exceed the sample size (n).")
@@ -234,8 +234,8 @@ test_that("Bayesian sampling - inconsistent counts recover by correcting either 
   # Lowering d restores the original data; raising n preserves the entered d=101.
   expect_equal(.bsInputErrorCollectionForTest(observed[[3L]])$infContainer_inferenceDecisionTable$data,
                .bsInputErrorCollectionForTest(observed[[1L]])$infContainer_inferenceDecisionTable$data)
-  options$data_ninfer <- 101
-  options$data_dinfer <- 101
+  options$inferenceSampleSize <- 101
+  options$inferenceObservedDefectives <- 101
   fresh <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(fresh$status, "complete")
   expected <- .bsInputErrorCollectionForTest(fresh)

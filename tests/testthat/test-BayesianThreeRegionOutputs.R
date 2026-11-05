@@ -2,19 +2,19 @@
 
 .bsThreeOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorplan <- "impartial_three"
-  options$aqlplan <- .05
-  options$rqlplan <- .15
-  options$impartialThreeConstraintplan <- "no_U"
-  options$max_nplan <- 1
-  options$min_bfplan <- 1
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
-  options$priorPlotplan <- TRUE
-  options$inferPosteriorinfer <- TRUE
-  options$showInferenceTableinfer <- TRUE
-  options$posteriorPlotinfer <- FALSE
-  options$ppdPlotinfer <- FALSE
+  options$planningPriorDistribution <- "impartial_three"
+  options$planningAcceptableQualityLevel <- .05
+  options$planningRejectableQualityLevel <- .15
+  options$planningPriorThreeRegionShapeConstraint <- "no_U"
+  options$planningMaximumSampleSize <- 1
+  options$planningMinimumBayesFactor <- 1
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$planningPriorPlot <- TRUE
+  options$inferenceUseData <- TRUE
+  options$inferenceDecisionTable <- TRUE
+  options$inferencePosteriorPlot <- FALSE
+  options$inferencePosteriorPredictivePlot <- FALSE
   options
 }
 
@@ -32,11 +32,11 @@
 
 test_that("Bayesian sampling - equal-thirds controls preserve existing defaults", {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  expect_identical(options$impartialThreeConstraintplan, "no_U")
-  expect_identical(options$priorplan, "impartial")
-  expect_identical(options$impartialShapeplan, "unimodal")
-  expect_true("impartialThreeConstraintplan" %in% jaspAcceptanceSampling:::.bsPlanningDeps())
-  expect_true("impartialThreeConstraintplan" %in% jaspAcceptanceSampling:::.bsInferenceDeps())
+  expect_identical(options$planningPriorThreeRegionShapeConstraint, "no_U")
+  expect_identical(options$planningPriorDistribution, "impartial")
+  expect_identical(options$planningPriorImpartialShape, "unimodal")
+  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsPlanningDeps())
+  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsInferenceDeps())
 })
 
 test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis stages", {
@@ -52,9 +52,9 @@ test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis 
     calibrated <- list()
     for (constraint in case$constraints) {
       options <- .bsThreeOptionsForTest()
-      options$aqlplan <- case$aql
-      options$rqlplan <- case$rql
-      options$impartialThreeConstraintplan <- constraint
+      options$planningAcceptableQualityLevel <- case$aql
+      options$planningRejectableQualityLevel <- case$rql
+      options$planningPriorThreeRegionShapeConstraint <- constraint
       captured <- list()
       prior_wrapper <- function(...) {
         params <- original_prior(...)
@@ -99,9 +99,9 @@ test_that("Bayesian sampling - incompatible equal-thirds shape constraints show 
     list(aql = .1, rql = .9, constraint = "both_ge_1"))
   for (case in cases) {
     options <- .bsThreeOptionsForTest()
-    options$aqlplan <- case$aql
-    options$rqlplan <- case$rql
-    options$impartialThreeConstraintplan <- case$constraint
+    options$planningAcceptableQualityLevel <- case$aql
+    options$planningRejectableQualityLevel <- case$rql
+    options$planningPriorThreeRegionShapeConstraint <- case$constraint
     result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
     expect_identical(result$status, "complete")
     for (container in c("planContainer", "infContainer")) {
@@ -125,10 +125,10 @@ test_that("Bayesian sampling - changing equal-thirds constraints clears stale ou
   for (case in list(list(aql = .05, rql = .15, valid = "no_U", invalid = "both_ge_1"),
                     list(aql = .1, rql = .9, valid = "none", invalid = "no_U"))) {
     options <- .bsThreeOptionsForTest()
-    options$aqlplan <- case$aql
-    options$rqlplan <- case$rql
-    options$impartialThreeConstraintplan <- case$valid
-    options$posteriorPlotinfer <- TRUE
+    options$planningAcceptableQualityLevel <- case$aql
+    options$planningRejectableQualityLevel <- case$rql
+    options$planningPriorThreeRegionShapeConstraint <- case$valid
+    options$inferencePosteriorPlot <- TRUE
     observed <- list()
     cache_removed <- logical()
     wrapper <- function(jaspResults, options, position) {
@@ -140,7 +140,7 @@ test_that("Bayesian sampling - changing equal-thirds constraints clears stale ou
       original_inference(jaspResults, options, position)
       observed[[1L]] <<- readOutput()
       for (i in seq_along(c(case$invalid, case$valid))) {
-        options$impartialThreeConstraintplan <- c(case$invalid, case$valid)[i]
+        options$planningPriorThreeRegionShapeConstraint <- c(case$invalid, case$valid)[i]
         private$changeOptions(as.character(jsonlite::toJSON(options)))
         cache_removed <<- c(cache_removed, is.null(jaspResults[["planData"]]))
         jaspBase:::emptyRecomputed()
@@ -181,12 +181,12 @@ test_that("Bayesian sampling - changing equal-thirds constraints clears stale ou
 
 test_that("Bayesian sampling - old approximate equal-thirds plans are recalibrated", {
   options <- .bsThreeOptionsForTest()
-  options$aqlplan <- .05
-  options$rqlplan <- .055
-  options$impartialThreeConstraintplan <- "none"
-  options$max_nplan <- 40
-  options$inferPosteriorinfer <- FALSE
-  options$priorPlotplan <- FALSE
+  options$planningAcceptableQualityLevel <- .05
+  options$planningRejectableQualityLevel <- .055
+  options$planningPriorThreeRegionShapeConstraint <- "none"
+  options$planningMaximumSampleSize <- 40
+  options$inferenceUseData <- FALSE
+  options$planningPriorPlot <- FALSE
   ns <- asNamespace("jaspAcceptanceSampling")
   original <- get(".bsPlanningAnalysis", ns)
   original_generator <- get(".bsGeneratePlans", ns)
@@ -233,9 +233,9 @@ test_that("Bayesian sampling - old approximate equal-thirds plans are recalibrat
 
 test_that("Bayesian sampling - exact-thirds planning and inference agree with density quadrature", {
   options <- .bsThreeOptionsForTest()
-  options$max_nplan <- 40
-  options$min_bfplan <- 30
-  options$priorPlotplan <- FALSE
+  options$planningMaximumSampleSize <- 40
+  options$planningMinimumBayesFactor <- 30
+  options$planningPriorPlot <- FALSE
   ns <- asNamespace("jaspAcceptanceSampling")
   original_prior <- get(".bsCalculatePriorParams", ns)
   original_table <- get(".bsInferenceDecisionTable", ns)

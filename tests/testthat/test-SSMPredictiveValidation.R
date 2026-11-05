@@ -120,19 +120,19 @@ test_that("decision notes follow strict rules and changed thresholds without ref
   ns <- asNamespace("jaspAcceptanceSampling")
   original <- get("bayesianSSMforASInternal", ns)
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = character())
+  assignments <- list(defectCount = "y", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = character())
   options[names(assignments)] <- lapply(assignments, function(columns) {
     if (!length(columns)) return(columns)
     list(value = columns, types = as.list(rep("scale", length(columns))))
   })
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
     options[[name]] <- FALSE
-  options$ssm_controlLimitsLower <- .04
-  options$ssm_controlLimitsUpper <- .06
-  options$ssm_decisionAcceptThreshold <- .25
-  options$ssm_decisionRejectThreshold <- .15
+  options$settingsAcceptableQualityLevel <- .04
+  options$settingsRejectableQualityLevel <- .06
+  options$settingsAcceptanceThreshold <- .25
+  options$settingsRejectionThreshold <- .15
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
   fixture_data <- data.frame(y = 0, n = 0, s = 100, lot = 1)
@@ -163,8 +163,8 @@ test_that("decision notes follow strict rules and changed thresholds without ref
     percentages <- list("25%", c("15%", "25%"), "15%", c("20%", "25%"),
                         c("15%", "20%"), c("12.5%", "37.5%"), c("12.5%", "37.5%"))
     for (i in seq_len(nrow(cases))) {
-      options$ssm_decisionAcceptThreshold <- cases$accept[i]
-      options$ssm_decisionRejectThreshold <- cases$reject[i]
+      options$settingsAcceptanceThreshold <- cases$accept[i]
+      options$settingsRejectionThreshold <- cases$reject[i]
       # Preserve scalar, array and integer/double formats for unchanged options.
       nativeOptions <- options
       typeNames <- names(nativeOptions)[endsWith(names(nativeOptions), ".types")]

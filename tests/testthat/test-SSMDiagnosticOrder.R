@@ -1,15 +1,15 @@
 test_that("computational diagnostics follow all plots and precede a reused MCMC table", {
   ns <- asNamespace("jaspAcceptanceSampling")
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
-                      ssm_time = "lot", ssm_predictor = c("temperature", "humidity"))
+  assignments <- list(defectCount = "count", sampleSize = "n", lotSize = "s",
+                      lotNumber = "lot", covariates = c("temperature", "humidity"))
   options[names(assignments)] <- lapply(assignments, function(columns) {
     if (!length(columns)) return(columns)
     list(value = columns, types = as.list(rep("scale", length(columns))))
   })
-  for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
-                 "ssm_plotBeta", "ssm_printDiagnostics", "ssm_showMcmcSummary",
-                 "ssm_showTheta", "ssm_showSigma", "ssm_showYpred", "ssm_showBeta"))
+  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
+                 "plotsPredictorCoefficients", "mcmcDiagnosticsPrint", "mcmcDiagnosticsOverviewTable",
+                 "mcmcDiagnosticsOverviewTheta", "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta"))
     options[[name]] <- TRUE
   dataset <- data.frame(count = c(1, 0, 2, 1), n = 20, s = 100, lot = 1:4,
                         temperature = c(-2, -1, 0, 1), humidity = c(1, 0, -1, 2))
@@ -69,8 +69,8 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
 
     for (name in c("warnings", "fullAgain", "healthyOff", "priorChange")) {
       # Display changes reuse the fit; changing its prior must invalidate it.
-      if (identical(name, "priorChange")) options$ssm_priorSigmaSD <- 2
-      options$ssm_printDiagnostics <- identical(name, "fullAgain")
+      if (identical(name, "priorChange")) options$modelInnovationPriorScale <- 2
+      options$mcmcDiagnosticsPrint <- identical(name, "fullAgain")
       if (identical(name, "healthyOff")) {
         stored <- jaspResults[["fit"]]$object
         stored$diagnostics$sampler$divergences[] <- 0L

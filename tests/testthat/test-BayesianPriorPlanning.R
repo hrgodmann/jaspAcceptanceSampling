@@ -2,12 +2,12 @@
 
 .bsPriorPlanningOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$priorPlotplan <- TRUE
-  options$showPlansplan <- FALSE
-  options$showThreeBFplan <- FALSE
-  options$inferPosteriorinfer <- FALSE
-  options$max_nplan <- 1
-  options$min_bfplan <- 30
+  options$planningPriorPlot <- TRUE
+  options$planningPlansTable <- FALSE
+  options$planningThreeHypothesisBayesFactorTable <- FALSE
+  options$inferenceUseData <- FALSE
+  options$planningMaximumSampleSize <- 1
+  options$planningMinimumBayesFactor <- 30
   options
 }
 
@@ -36,8 +36,8 @@ test_that("Bayesian sampling - prior-only output does not search for a sampling 
 test_that("Bayesian sampling - infeasible requested tables do not suppress a valid prior", {
   for (requested in list(c(TRUE, FALSE), c(FALSE, TRUE), c(TRUE, TRUE))) {
     options <- .bsPriorPlanningOptionsForTest()
-    options$showPlansplan <- requested[1L]
-    options$showThreeBFplan <- requested[2L]
+    options$planningPlansTable <- requested[1L]
+    options$planningThreeHypothesisBayesFactorTable <- requested[2L]
     results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                      options = options, view = FALSE)
     collection <- .bsPlanningCollectionForTest(results)
@@ -63,10 +63,10 @@ test_that("Bayesian sampling - infeasible requested tables do not suppress a val
 })
 
 test_that("Bayesian sampling - invalid planning controls are rejected by the QML input bounds", {
-  for (option in c("max_nplan", "min_bfplan")) {
+  for (option in c("planningMaximumSampleSize", "planningMinimumBayesFactor")) {
     options <- .bsPriorPlanningOptionsForTest()
-    options$showPlansplan <- TRUE
-    options$showThreeBFplan <- TRUE
+    options$planningPlansTable <- TRUE
+    options$planningThreeHypothesisBayesFactorTable <- TRUE
     options[[option]] <- 0
     expect_error(
       jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
@@ -76,9 +76,9 @@ test_that("Bayesian sampling - invalid planning controls are rejected by the QML
 
 test_that("Bayesian sampling - prior survives plan infeasibility, invalid BF targets, and recovery", {
   options <- .bsPriorPlanningOptionsForTest()
-  options$showPlansplan <- TRUE
-  options$showThreeBFplan <- TRUE
-  options$max_nplan <- 40
+  options$planningPlansTable <- TRUE
+  options$planningThreeHypothesisBayesFactorTable <- TRUE
+  options$planningMaximumSampleSize <- 40
   original <- get(".bsPlanningAnalysis", asNamespace("jaspAcceptanceSampling"))
   visited <- 0L
   observed <- list()
@@ -92,8 +92,8 @@ test_that("Bayesian sampling - prior survives plan infeasibility, invalid BF tar
       .bsPlanningCollectionForTest(result)
     }
     observed[[1L]] <<- readCollection()
-    changes <- list(list(max_nplan = 1), list(max_nplan = 40),
-                    list(min_bfplan = 0), list(min_bfplan = 30))
+    changes <- list(list(planningMaximumSampleSize = 1), list(planningMaximumSampleSize = 40),
+                    list(planningMinimumBayesFactor = 0), list(planningMinimumBayesFactor = 30))
     for (change in changes) {
       options[names(change)] <- change
       # Exercise the real engine's dependency invalidation on the same result.

@@ -3,25 +3,25 @@
 test_that("BayesianSSMforAS - analysis uses time-sorted data", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
-  options$ssm_predictor <- ""
+  options$defectCount <- "count"
+  options$sampleSize <- "n"
+  options$lotSize <- "N"
+  options$lotNumber <- "time"
+  options$covariates <- ""
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- FALSE
-  options$ssm_showMcmcSummary <- FALSE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- FALSE
+  options$mcmcDiagnosticsOverviewTable <- FALSE
 
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   ssmData <- data.frame(
     count = c(3, 1, 2),
@@ -39,7 +39,7 @@ test_that("BayesianSSMforAS - analysis uses time-sorted data", {
   expect_true("summaryTable" %in% names(results$results))
   expect_equal(results$results$summaryTable$data[[1]]$t, "30")
   expect_equal(results$results$summaryTable$data[[1]]$y, 3)
-  expect_false(options$ssm_printDiagnostics)
+  expect_false(options$mcmcDiagnosticsPrint)
   expect_true("samplerDiagnostics" %in% names(results$results))
 })
 
@@ -47,12 +47,12 @@ test_that("BayesianSSMforAS - options load", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
   expect_true(is.list(options))
-  expect_true("ssm_count" %in% names(options))
+  expect_true("defectCount" %in% names(options))
   # An empty optional selector may be omitted from the generated options.
   expect_length(getFromNamespace(".asSSM_predictorNames", "jaspAcceptanceSampling")(options), 0L)
-  expect_identical(options$ssm_printDiagnostics, FALSE)
-  expect_equal(options$ssm_advancedMcmcAdaptDelta, 0.97)
-  expect_equal(options$ssm_advancedMcmcMaxTreeDepth, 15)
+  expect_identical(options$mcmcDiagnosticsPrint, FALSE)
+  expect_equal(options$advancedMcmcAdaptDelta, 0.97)
+  expect_equal(options$advancedMcmcMaxTreeDepth, 15)
   expect_false("ssm_scaleModel" %in% names(options))
   expect_false(any(c("ssm_postHocCorrection", "ssm_postHocCorrectionWeight") %in% names(options)))
 })
@@ -60,29 +60,29 @@ test_that("BayesianSSMforAS - options load", {
 test_that("BayesianSSMforAS - an empty predictor selects the base model", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
-  options$ssm_predictor <- ""
+  options$defectCount <- "count"
+  options$sampleSize <- "n"
+  options$lotSize <- "N"
+  options$lotNumber <- "time"
+  options$covariates <- ""
   options$ssm_scaleModel <- "WithPredictor" # Obsolete saved selector is ignored.
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- TRUE
-  options$ssm_showMcmcSummary <- TRUE
-  options$ssm_showSigma <- TRUE
-  options$ssm_showBeta <- TRUE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- TRUE
+  options$mcmcDiagnosticsOverviewTable <- TRUE
+  options$mcmcDiagnosticsOverviewSigma <- TRUE
+  options$mcmcDiagnosticsOverviewBeta <- TRUE
 
   # Keep test runtime short while still exercising Stan sampling and result wiring.
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   ssmData <- data.frame(
     count = c(1, 0, 2, 1, 1),
@@ -114,25 +114,25 @@ test_that("BayesianSSMforAS - an empty predictor selects the base model", {
 test_that("BayesianSSMforAS - predictive summary is deterministic across reruns", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
-  options$ssm_predictor <- ""
+  options$defectCount <- "count"
+  options$sampleSize <- "n"
+  options$lotSize <- "N"
+  options$lotNumber <- "time"
+  options$covariates <- ""
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- FALSE
-  options$ssm_showMcmcSummary <- FALSE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- FALSE
+  options$mcmcDiagnosticsOverviewTable <- FALSE
 
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   ssmData <- data.frame(
     count = c(1, 0, 2, 1, 1),
@@ -160,25 +160,25 @@ test_that("BayesianSSMforAS - invalid lot inputs fail gracefully before Stan", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
   # Keep the intended numeric inputs numeric in the native test runner.
-  options$ssm_count <- list(value = "count", types = list("scale"))
-  options$ssm_sampleSize <- list(value = "n", types = list("scale"))
-  options$ssm_total <- list(value = "N", types = list("scale"))
-  options$ssm_time <- list(value = "time", types = list("scale"))
-  options$ssm_predictor <- ""
+  options$defectCount <- list(value = "count", types = list("scale"))
+  options$sampleSize <- list(value = "n", types = list("scale"))
+  options$lotSize <- list(value = "N", types = list("scale"))
+  options$lotNumber <- list(value = "time", types = list("scale"))
+  options$covariates <- ""
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- FALSE
-  options$ssm_showMcmcSummary <- FALSE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- FALSE
+  options$mcmcDiagnosticsOverviewTable <- FALSE
 
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   invalidData <- data.frame(
     count = c(10, 1),
@@ -202,25 +202,25 @@ test_that("BayesianSSMforAS - invalid lot inputs fail gracefully before Stan", {
 test_that("BayesianSSMforAS - constant predictor fails gracefully before Stan", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
-  options$ssm_predictor <- "temp"
+  options$defectCount <- "count"
+  options$sampleSize <- "n"
+  options$lotSize <- "N"
+  options$lotNumber <- "time"
+  options$covariates <- "temp"
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- FALSE
-  options$ssm_showMcmcSummary <- FALSE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- FALSE
+  options$mcmcDiagnosticsOverviewTable <- FALSE
 
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   invalidData <- data.frame(
     count = c(1, 0, 2, 1, 1),
@@ -245,27 +245,27 @@ test_that("BayesianSSMforAS - constant predictor fails gracefully before Stan", 
 
 test_that("BayesianSSMforAS - assigning a predictor selects the predictor model and outputs", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
-  options$ssm_predictor <- "temp"
+  options$defectCount <- "count"
+  options$sampleSize <- "n"
+  options$lotSize <- "N"
+  options$lotNumber <- "time"
+  options$covariates <- "temp"
   options$ssm_scaleModel <- "WithoutPredictor" # Obsolete saved selector is ignored.
 
-  options$ssm_statePlot <- FALSE
-  options$ssm_predictionPlot <- FALSE
-  options$ssm_posteriorDistPlot <- FALSE
-  options$ssm_plotBeta <- TRUE
-  options$ssm_showMcmcSummary <- TRUE
-  options$ssm_showBeta <- TRUE
+  options$plotsStateTimeSeries <- FALSE
+  options$plotsPosteriorPredictive <- FALSE
+  options$plotsLatestDefectRate <- FALSE
+  options$plotsPredictorCoefficients <- TRUE
+  options$mcmcDiagnosticsOverviewTable <- TRUE
+  options$mcmcDiagnosticsOverviewBeta <- TRUE
 
-  options$ssm_advancedMcmcBurnin <- 100
-  options$ssm_advancedMcmcSamples <- 100
-  options$ssm_advancedMcmcChains <- 1
-  options$ssm_advancedMcmcThin <- 1
-  options$ssm_advancedMcmcSeed <- 123
-  options$ssm_advancedMcmcAdaptDelta <- 0.9
-  options$ssm_advancedMcmcMaxTreeDepth <- 8
+  options$advancedMcmcBurnin <- 100
+  options$advancedMcmcSamples <- 100
+  options$advancedMcmcChains <- 1
+  options$advancedMcmcThin <- 1
+  options$advancedMcmcSeed <- 123
+  options$advancedMcmcAdaptDelta <- 0.9
+  options$advancedMcmcMaxTreeDepth <- 8
 
   ssmData <- data.frame(
     count = c(1, 0, 2, 1, 1), n = rep(20, 5), N = rep(100, 5),

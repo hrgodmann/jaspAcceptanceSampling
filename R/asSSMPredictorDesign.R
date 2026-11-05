@@ -1,6 +1,6 @@
 .asSSM_predictorNames <- function(options) {
   # A saved single selection is a string; multiple selections are a character vector.
-  predictors <- options[["ssm_predictor"]]
+  predictors <- options[["covariates"]]
   if (!length(predictors)) return(character())
   predictors[nzchar(predictors)]
 }
