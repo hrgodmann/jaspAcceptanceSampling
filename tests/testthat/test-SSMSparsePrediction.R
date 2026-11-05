@@ -76,7 +76,9 @@ test_that("predictive plots retain empty bins and exact weights for sparse and c
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
                       ssm_time = "lot", ssm_predictor = character())
-  options[names(assignments)] <- assignments
+  # Specify Scale for the numeric fixture columns.
+  options[names(assignments)] <- lapply(assignments, function(columns)
+    if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
   for (name in c("ssm_statePlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
                  "ssm_showMcmcSummary", "ssm_printDiagnostics"))
     options[[name]] <- FALSE

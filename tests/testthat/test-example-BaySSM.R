@@ -23,8 +23,11 @@ test_that("BayesianSSMforAS runs without error", {
   set.seed(1)
   results <- jaspTools::runAnalysis("BayesianSSMforAS", dataset, opts, view = FALSE)
 
-  expect_equal(results$status, "complete")
-  expect_false("placeholder" %in% names(results$results))
+  errorInfo <- paste(c(results$errorMessage, results$results$errorMessage,
+                       unlist(results$results$placeholder$error, use.names = FALSE)),
+                     collapse = "\n")
+  expect_equal(results$status, "complete", info = errorInfo)
+  expect_false("placeholder" %in% names(results$results), info = errorInfo)
   expect_true(all(c("summaryTable", "samplerDiagnostics") %in% names(results$results)))
   expect_false("predPlotNote" %in% names(results$results))
 

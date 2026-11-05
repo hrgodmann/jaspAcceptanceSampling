@@ -122,7 +122,10 @@ test_that("decision notes follow strict rules and changed thresholds without ref
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
                       ssm_time = "lot", ssm_predictor = character())
-  options[names(assignments)] <- assignments
+  options[names(assignments)] <- lapply(assignments, function(columns) {
+    if (!length(columns)) return(columns)
+    list(value = columns, types = as.list(rep("scale", length(columns))))
+  })
   for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
                  "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
     options[[name]] <- FALSE
@@ -162,7 +165,12 @@ test_that("decision notes follow strict rules and changed thresholds without ref
     for (i in seq_len(nrow(cases))) {
       options$ssm_decisionAcceptThreshold <- cases$accept[i]
       options$ssm_decisionRejectThreshold <- cases$reject[i]
-      jaspResults$.__enclos_env__$private$changeOptions(as.character(jsonlite::toJSON(options)))
+      # Preserve scalar, array and integer/double formats for unchanged options.
+      nativeOptions <- options
+      typeNames <- names(nativeOptions)[endsWith(names(nativeOptions), ".types")]
+      nativeOptions[typeNames] <- lapply(nativeOptions[typeNames], as.list)
+      jaspResults$.__enclos_env__$private$changeOptions(as.character(jsonlite::toJSON(
+        nativeOptions, auto_unbox = TRUE, digits = NA, null = "null", always_decimal = TRUE)))
       jaspBase:::emptyRecomputed()
       original(jaspResults, dataset, options)
       # Repeated builder calls on the same table must not append duplicate notes.

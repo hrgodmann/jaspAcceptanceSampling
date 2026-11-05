@@ -159,10 +159,11 @@ test_that("BayesianSSMforAS - predictive summary is deterministic across reruns"
 test_that("BayesianSSMforAS - invalid lot inputs fail gracefully before Stan", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
 
-  options$ssm_count <- "count"
-  options$ssm_sampleSize <- "n"
-  options$ssm_total <- "N"
-  options$ssm_time <- "time"
+  # Keep the intended numeric inputs numeric in the native test runner.
+  options$ssm_count <- list(value = "count", types = list("scale"))
+  options$ssm_sampleSize <- list(value = "n", types = list("scale"))
+  options$ssm_total <- list(value = "N", types = list("scale"))
+  options$ssm_time <- list(value = "time", types = list("scale"))
   options$ssm_predictor <- ""
 
   options$ssm_statePlot <- FALSE

@@ -3,7 +3,10 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
                       ssm_time = "lot", ssm_predictor = c("temperature", "humidity"))
-  options[names(assignments)] <- assignments
+  options[names(assignments)] <- lapply(assignments, function(columns) {
+    if (!length(columns)) return(columns)
+    list(value = columns, types = as.list(rep("scale", length(columns))))
+  })
   for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
                  "ssm_plotBeta", "ssm_printDiagnostics", "ssm_showMcmcSummary",
                  "ssm_showTheta", "ssm_showSigma", "ssm_showYpred", "ssm_showBeta"))
@@ -16,6 +19,7 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
 
   # Only model fitting is substituted. All output objects and sorting are real.
   generations <- 0L
+  generationsByUpdate <- integer()
   fit <- function(jaspResults, dataset, options) {
     if (is.null(jaspResults[["fit"]])) {
       state <- jaspBase::createJaspState()
@@ -63,17 +67,25 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
     reusedPosition <<- oldTable$position
     observed$reused <<- capture()
 
-    for (name in c("warnings", "fullAgain", "healthyOff")) {
+    for (name in c("warnings", "fullAgain", "healthyOff", "priorChange")) {
+      # Display changes reuse the fit; changing its prior must invalidate it.
+      if (identical(name, "priorChange")) options$ssm_priorSigmaSD <- 2
       options$ssm_printDiagnostics <- identical(name, "fullAgain")
       if (identical(name, "healthyOff")) {
         stored <- jaspResults[["fit"]]$object
         stored$diagnostics$sampler$divergences[] <- 0L
         jaspResults[["fit"]]$object <- stored
       }
-      private$changeOptions(as.character(jsonlite::toJSON(options, digits = NA)))
+      # Preserve scalar, array and integer/double formats for unchanged options.
+      nativeOptions <- options
+      typeNames <- names(nativeOptions)[endsWith(names(nativeOptions), ".types")]
+      nativeOptions[typeNames] <- lapply(nativeOptions[typeNames], as.list)
+      private$changeOptions(as.character(jsonlite::toJSON(
+        nativeOptions, auto_unbox = TRUE, digits = NA, null = "null", always_decimal = TRUE)))
       jaspBase:::emptyRecomputed()
       original(jaspResults, dataset, options)
       observed[[name]] <<- capture()
+      generationsByUpdate[[name]] <<- generations
     }
   }
   result <- testthat::with_mocked_bindings(
@@ -84,7 +96,9 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
   expect_identical(result$status, "complete")
   expect_true(reused)
   expect_equal(reusedPosition, 6)
-  expect_equal(generations, 1L)
+  expect_equal(generations, 2L)
+  expect_identical(generationsByUpdate,
+                   c(warnings = 1L, fullAgain = 1L, healthyOff = 1L, priorChange = 2L))
   keys <- function(x) vapply(x$results$.meta, function(item) item$name, character(1))
   allOutputs <- c("summaryTable", "predictorSummary", "ssm_statePlot", "predPlot",
                   "postDist", "betaPlot", "samplerDiagnostics", "mcmcSummary")

@@ -8,7 +8,9 @@
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(ssm_count = "count", ssm_sampleSize = "n", ssm_total = "s",
                       ssm_time = "lot", ssm_predictor = predictors)
-  options[names(assignments)] <- assignments
+  # Specify Scale for the numeric fixture columns.
+  options[names(assignments)] <- lapply(assignments, function(columns)
+    if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
   for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
                  "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
     options[[name]] <- name %in% plots

@@ -112,6 +112,8 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- .ssm_ordinal_options()
   options[names(assignments)] <- assignments
+  for (name in c("ssm_count", "ssm_sampleSize", "ssm_total", "ssm_time"))
+    options[[name]] <- list(value = assignments[[name]], types = list("scale"))
   for (name in c("ssm_statePlot", "ssm_predictionPlot", "ssm_posteriorDistPlot",
                  "ssm_plotBeta", "ssm_showMcmcSummary", "ssm_printDiagnostics"))
     options[[name]] <- FALSE
@@ -121,6 +123,7 @@ test_that("preloaded ordinal lots give the same current-lot output and retain mi
   ordinal$lot <- ordered(as.character(numeric$lot), levels = c("120", "40", "10"))
   # Exercise native input handling with both numeric and ordered lot labels.
   baseline <- jaspTools::runAnalysis("BayesianSSMforAS", numeric, options, view = FALSE)
+  options$ssm_time$types <- list("ordinal")
   actual <- jaspTools::runAnalysis("BayesianSSMforAS", ordinal, options, view = FALSE)
   expect_identical(baseline$status, "complete")
   expect_identical(actual$status, "complete")

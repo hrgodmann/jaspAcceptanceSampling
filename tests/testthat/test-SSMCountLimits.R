@@ -60,7 +60,9 @@ test_that("table decisions and plot limits share strict decimal count boundaries
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(ssm_count = "y", ssm_sampleSize = "n", ssm_total = "s",
                       ssm_time = "lot", ssm_predictor = character())
-  options[names(assignments)] <- assignments
+  # Specify Scale for the numeric fixture columns.
+  options[names(assignments)] <- lapply(assignments, function(columns)
+    if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
   for (name in c("ssm_statePlot", "ssm_posteriorDistPlot", "ssm_plotBeta",
                  "ssm_showMcmcSummary", "ssm_printDiagnostics"))
     options[[name]] <- FALSE
@@ -72,14 +74,15 @@ test_that("table decisions and plot limits share strict decimal count boundaries
          limits = c(5, 29), below = 0, above = 0, decision = "Accept"),
     list(s = 100, n = 100, y = 7, draws = rep(7, 4), aql = .07, rql = .10,
          limits = c(7, 10), below = 0, above = 0, decision = "Accept"),
-    list(s = 100, n = 100, y = 29, draws = rep(29, 4), aql = .05, rql = .2899,
-         limits = c(5, (.2899) * 100), below = 0, above = 1, decision = "Reject"),
-    list(s = 100, n = 100, y = 29, draws = rep(29, 4), aql = .05, rql = .2901,
-         limits = c(5, (.2901) * 100), below = 0, above = 0, decision = "Accept"),
-    list(s = 100, n = 100, y = 7, draws = rep(7, 4), aql = .0699, rql = .10,
-         limits = c((.0699) * 100, 10), below = 0, above = 0, decision = "Accept"),
-    list(s = 100, n = 100, y = 7, draws = rep(7, 4), aql = .0701, rql = .10,
-         limits = c((.0701) * 100, 10), below = 1, above = 0, decision = "Accept"),
+    # Use neighboring limits accepted by the QML controls.
+    list(s = 100, n = 100, y = 29, draws = rep(29, 4), aql = .05, rql = .289,
+         limits = c(5, (.289) * 100), below = 0, above = 1, decision = "Reject"),
+    list(s = 100, n = 100, y = 29, draws = rep(29, 4), aql = .05, rql = .291,
+         limits = c(5, (.291) * 100), below = 0, above = 0, decision = "Accept"),
+    list(s = 100, n = 100, y = 7, draws = rep(7, 4), aql = .069, rql = .10,
+         limits = c((.069) * 100, 10), below = 0, above = 0, decision = "Accept"),
+    list(s = 100, n = 100, y = 7, draws = rep(7, 4), aql = .071, rql = .10,
+         limits = c((.071) * 100, 10), below = 1, above = 0, decision = "Accept"),
     # Exact probability ties must survive aggregation over many supported counts.
     list(s = 1000, n = 0, y = 0, draws = c(rep(80, 900), 101:200), aql = .05, rql = .10,
          limits = c(50, 100), below = 0, above = .10, decision = "Continue"),
