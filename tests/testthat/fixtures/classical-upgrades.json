@@ -1,0 +1,1061 @@
+[
+  {
+    "analysis": "CreateAttributePlan",
+    "input": {
+      "aql": 0.027,
+      "rql": 0.093,
+      "prod_risk": 0.043,
+      "cons_risk": 0.087,
+      "pd_lower": 0,
+      "pd_upper": 0.21,
+      "pd_step": 0.007,
+      "showSummary": true,
+      "showOCCurve": false,
+      "showAOQCurve": true,
+      "showATICurve": false,
+      "showASNCurve": true,
+      "lotSize": 750,
+      "distribution": "hypergeom",
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "aql": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rql": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "prod_risk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "cons_risk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "pd_lower": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "pd_upper": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "pd_step": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "showSummary": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "showOCCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "showAOQCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "showATICurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "showASNCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "distribution": {
+          "descriptor": "distribution, not an option value"
+        }
+      }
+    },
+    "expected": {
+      "acceptableQualityLevel": 0.027,
+      "rejectableQualityLevel": 0.093,
+      "producerRisk": 0.043,
+      "consumerRisk": 0.087,
+      "proportionNonconformingFrom": 0,
+      "proportionNonconformingTo": 0.21,
+      "proportionNonconformingStep": 0.007,
+      "summaryTable": true,
+      "operatingCharacteristicCurve": false,
+      "averageOutgoingQualityCurve": true,
+      "averageTotalInspectionCurve": false,
+      "averageSampleNumberCurve": true,
+      "lotSize": 750,
+      "distribution": "hypergeometric",
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "acceptableQualityLevel": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rejectableQualityLevel": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "producerRisk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "consumerRisk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "proportionNonconformingFrom": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "proportionNonconformingTo": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "proportionNonconformingStep": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "summaryTable": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "operatingCharacteristicCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "averageOutgoingQualityCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "averageTotalInspectionCurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "averageSampleNumberCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "distribution": {
+          "descriptor": "distribution, not an option value"
+        }
+      }
+    }
+  },
+  {
+    "analysis": "CreateVariablePlan",
+    "input": {
+      "aql": 0.027,
+      "rql": 0.093,
+      "prod_risk": 0.043,
+      "cons_risk": 0.087,
+      "pd_lower": 0,
+      "pd_upper": 0.21,
+      "pd_step": 0.007,
+      "showSummary": true,
+      "showOCCurve": false,
+      "showAOQCurve": true,
+      "showATICurve": false,
+      "showASNCurve": true,
+      "sd": false,
+      "lotSize": 999,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "aql": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rql": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "prod_risk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "cons_risk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "pd_lower": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "pd_upper": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "pd_step": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "showSummary": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "showOCCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "showAOQCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "showATICurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "showASNCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "sd": {
+          "preserve": "sd",
+          "shouldEncode": false
+        }
+      }
+    },
+    "expected": {
+      "acceptableQualityLevel": 0.027,
+      "rejectableQualityLevel": 0.093,
+      "producerRisk": 0.043,
+      "consumerRisk": 0.087,
+      "proportionNonconformingFrom": 0,
+      "proportionNonconformingTo": 0.21,
+      "proportionNonconformingStep": 0.007,
+      "summaryTable": true,
+      "operatingCharacteristicCurve": false,
+      "averageOutgoingQualityCurve": true,
+      "averageTotalInspectionCurve": false,
+      "averageSampleNumberCurve": true,
+      "historicalSdKnown": false,
+      "lotSize": 999,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "acceptableQualityLevel": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rejectableQualityLevel": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "producerRisk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "consumerRisk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "proportionNonconformingFrom": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "proportionNonconformingTo": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "proportionNonconformingStep": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "summaryTable": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "operatingCharacteristicCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "averageOutgoingQualityCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "averageTotalInspectionCurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "averageSampleNumberCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "historicalSdKnown": {
+          "preserve": "sd",
+          "shouldEncode": false
+        }
+      }
+    }
+  },
+  {
+    "analysis": "AnalyzeVariablePlan",
+    "input": {
+      "aql": 0.027,
+      "rql": 0.093,
+      "prod_risk": 0.043,
+      "cons_risk": 0.087,
+      "pd_lower": 0,
+      "pd_upper": 0.21,
+      "pd_step": 0.007,
+      "showSummary": true,
+      "showOCCurve": false,
+      "showAOQCurve": true,
+      "showATICurve": false,
+      "showASNCurve": true,
+      "sd": false,
+      "assessPlan": true,
+      "lotSize": 999,
+      "sampleSize": 37,
+      "kValue": 1.287,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "aql": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rql": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "prod_risk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "cons_risk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "pd_lower": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "pd_upper": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "pd_step": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "showSummary": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "showOCCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "showAOQCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "showATICurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "showASNCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "sd": {
+          "preserve": "sd",
+          "shouldEncode": false
+        },
+        "assessPlan": {
+          "preserve": "assessPlan",
+          "shouldEncode": false
+        }
+      }
+    },
+    "expected": {
+      "planAssessmentAcceptableQualityLevel": 0.027,
+      "planAssessmentRejectableQualityLevel": 0.093,
+      "planAssessmentProducerRisk": 0.043,
+      "planAssessmentConsumerRisk": 0.087,
+      "proportionNonconformingFrom": 0,
+      "proportionNonconformingTo": 0.21,
+      "proportionNonconformingStep": 0.007,
+      "summaryTable": true,
+      "operatingCharacteristicCurve": false,
+      "averageOutgoingQualityCurve": true,
+      "averageTotalInspectionCurve": false,
+      "averageSampleNumberCurve": true,
+      "historicalSdKnown": false,
+      "planAssessment": true,
+      "lotSize": 999,
+      "sampleSize": 37,
+      "kValue": 1.287,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "planAssessmentAcceptableQualityLevel": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "planAssessmentRejectableQualityLevel": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "planAssessmentProducerRisk": {
+          "preserve": "prod_risk",
+          "shouldEncode": false
+        },
+        "planAssessmentConsumerRisk": {
+          "preserve": "cons_risk",
+          "shouldEncode": false
+        },
+        "proportionNonconformingFrom": {
+          "preserve": "pd_lower",
+          "shouldEncode": false
+        },
+        "proportionNonconformingTo": {
+          "preserve": "pd_upper",
+          "shouldEncode": false
+        },
+        "proportionNonconformingStep": {
+          "preserve": "pd_step",
+          "shouldEncode": false
+        },
+        "summaryTable": {
+          "preserve": "showSummary",
+          "shouldEncode": false
+        },
+        "operatingCharacteristicCurve": {
+          "preserve": "showOCCurve",
+          "shouldEncode": false
+        },
+        "averageOutgoingQualityCurve": {
+          "preserve": "showAOQCurve",
+          "shouldEncode": false
+        },
+        "averageTotalInspectionCurve": {
+          "preserve": "showATICurve",
+          "shouldEncode": false
+        },
+        "averageSampleNumberCurve": {
+          "preserve": "showASNCurve",
+          "shouldEncode": false
+        },
+        "historicalSdKnown": {
+          "preserve": "sd",
+          "shouldEncode": false
+        },
+        "planAssessment": {
+          "preserve": "assessPlan",
+          "shouldEncode": false
+        }
+      }
+    }
+  },
+  {
+    "analysis": "DecideVariableLots",
+    "input": {
+      "aql": 0.011,
+      "rql": 0.061,
+      "variables": "encoded measurement",
+      "sampleStats": false,
+      "sampleSD": 0.73,
+      "lsl": true,
+      "lower_spec": -2.4,
+      "usl": false,
+      "upper_spec": 3.7,
+      "sd": true,
+      "stdev": 1.23,
+      "sampleSize": 43,
+      "sampleMean": 0.37,
+      "kValue": 1.92,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "aql": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rql": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "variables": {
+          "preserve": "variables",
+          "shouldEncode": true
+        },
+        "sampleStats": {
+          "preserve": "sampleStats",
+          "shouldEncode": false
+        },
+        "sampleSD": {
+          "preserve": "sampleSD",
+          "shouldEncode": false
+        },
+        "lsl": {
+          "preserve": "lsl",
+          "shouldEncode": false
+        },
+        "lower_spec": {
+          "preserve": "lower_spec",
+          "shouldEncode": false
+        },
+        "usl": {
+          "preserve": "usl",
+          "shouldEncode": false
+        },
+        "upper_spec": {
+          "preserve": "upper_spec",
+          "shouldEncode": false
+        },
+        "sd": {
+          "preserve": "sd",
+          "shouldEncode": false
+        },
+        "stdev": {
+          "preserve": "stdev",
+          "shouldEncode": false
+        }
+      }
+    },
+    "expected": {
+      "acceptableQualityLevel": 0.011,
+      "rejectableQualityLevel": 0.061,
+      "measurement": "encoded measurement",
+      "sampleStatistics": false,
+      "sampleSd": 0.73,
+      "lowerSpecificationLimit": true,
+      "lowerSpecificationLimitValue": -2.4,
+      "upperSpecificationLimit": false,
+      "upperSpecificationLimitValue": 3.7,
+      "historicalSdKnown": true,
+      "historicalSd": 1.23,
+      "sampleSize": 43,
+      "sampleMean": 0.37,
+      "kValue": 1.92,
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "acceptableQualityLevel": {
+          "preserve": "aql",
+          "shouldEncode": false
+        },
+        "rejectableQualityLevel": {
+          "preserve": "rql",
+          "shouldEncode": false
+        },
+        "measurement": {
+          "preserve": "variables",
+          "shouldEncode": true
+        },
+        "sampleStatistics": {
+          "preserve": "sampleStats",
+          "shouldEncode": false
+        },
+        "sampleSd": {
+          "preserve": "sampleSD",
+          "shouldEncode": false
+        },
+        "lowerSpecificationLimit": {
+          "preserve": "lsl",
+          "shouldEncode": false
+        },
+        "lowerSpecificationLimitValue": {
+          "preserve": "lower_spec",
+          "shouldEncode": false
+        },
+        "upperSpecificationLimit": {
+          "preserve": "usl",
+          "shouldEncode": false
+        },
+        "upperSpecificationLimitValue": {
+          "preserve": "upper_spec",
+          "shouldEncode": false
+        },
+        "historicalSdKnown": {
+          "preserve": "sd",
+          "shouldEncode": false
+        },
+        "historicalSd": {
+          "preserve": "stdev",
+          "shouldEncode": false
+        }
+      }
+    }
+  },
+  {
+    "analysis": "AnalyzeAttributePlan",
+    "input": {
+      "aqlSingle": 0.027,
+      "rqlSingle": 0.093,
+      "prod_riskSingle": 0.043,
+      "cons_riskSingle": 0.087,
+      "pd_lowerSingle": 0,
+      "pd_upperSingle": 0.21,
+      "pd_stepSingle": 0.007,
+      "showSummarySingle": true,
+      "showOCCurveSingle": false,
+      "showAOQCurveSingle": true,
+      "showATICurveSingle": false,
+      "showASNCurveSingle": true,
+      "assessPlanSingle": true,
+      "lotSizeSingle": 750,
+      "distributionSingle": "binom",
+      "aqlMult": 0.054,
+      "rqlMult": 0.186,
+      "prod_riskMult": 0.086,
+      "cons_riskMult": 0.174,
+      "pd_lowerMult": 0,
+      "pd_upperMult": 0.42,
+      "pd_stepMult": 0.014,
+      "showSummaryMult": true,
+      "showOCCurveMult": false,
+      "showAOQCurveMult": true,
+      "showATICurveMult": false,
+      "showASNCurveMult": true,
+      "assessPlanMult": true,
+      "lotSizeMult": 1500,
+      "distributionMult": "hypergeom",
+      "sampleSizeSingle": 53,
+      "acceptNumberSingle": 2,
+      "rejectNumberSingle": 3,
+      "numberOfStages": 3,
+      "stages": [
+        {
+          "value": "1",
+          "sampleSizeMult": 31,
+          "acceptNumberMult": 0,
+          "rejectNumberMult": 2,
+          "note": "retain first row"
+        },
+        {
+          "value": "2",
+          "sampleSizeMult": 47,
+          "acceptNumberMult": 2,
+          "rejectNumberMult": 5
+        },
+        {
+          "value": "3",
+          "sampleSizeMult": 59,
+          "acceptNumberMult": 6,
+          "rejectNumberMult": 7
+        }
+      ],
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "pd_lowerSingle": {
+          "preserve": "pd_lowerSingle",
+          "shouldEncode": false
+        },
+        "pd_upperSingle": {
+          "preserve": "pd_upperSingle",
+          "shouldEncode": false
+        },
+        "pd_stepSingle": {
+          "preserve": "pd_stepSingle",
+          "shouldEncode": false
+        },
+        "showSummarySingle": {
+          "preserve": "showSummarySingle",
+          "shouldEncode": false
+        },
+        "showOCCurveSingle": {
+          "preserve": "showOCCurveSingle",
+          "shouldEncode": false
+        },
+        "showAOQCurveSingle": {
+          "preserve": "showAOQCurveSingle",
+          "shouldEncode": false
+        },
+        "showATICurveSingle": {
+          "preserve": "showATICurveSingle",
+          "shouldEncode": false
+        },
+        "showASNCurveSingle": {
+          "preserve": "showASNCurveSingle",
+          "shouldEncode": false
+        },
+        "lotSizeSingle": {
+          "preserve": "lotSizeSingle",
+          "shouldEncode": false
+        },
+        "distributionSingle": {
+          "preserve": "distributionSingle",
+          "shouldEncode": false
+        },
+        "assessPlanSingle": {
+          "preserve": "assessPlanSingle",
+          "shouldEncode": false
+        },
+        "aqlSingle": {
+          "preserve": "aqlSingle",
+          "shouldEncode": false
+        },
+        "rqlSingle": {
+          "preserve": "rqlSingle",
+          "shouldEncode": false
+        },
+        "prod_riskSingle": {
+          "preserve": "prod_riskSingle",
+          "shouldEncode": false
+        },
+        "cons_riskSingle": {
+          "preserve": "cons_riskSingle",
+          "shouldEncode": false
+        },
+        "sampleSizeSingle": {
+          "preserve": "sampleSizeSingle",
+          "shouldEncode": false
+        },
+        "acceptNumberSingle": {
+          "preserve": "acceptNumberSingle",
+          "shouldEncode": false
+        },
+        "rejectNumberSingle": {
+          "preserve": "rejectNumberSingle",
+          "shouldEncode": false
+        },
+        "pd_lowerMult": {
+          "preserve": "pd_lowerMult",
+          "shouldEncode": false
+        },
+        "pd_upperMult": {
+          "preserve": "pd_upperMult",
+          "shouldEncode": false
+        },
+        "pd_stepMult": {
+          "preserve": "pd_stepMult",
+          "shouldEncode": false
+        },
+        "showSummaryMult": {
+          "preserve": "showSummaryMult",
+          "shouldEncode": false
+        },
+        "showOCCurveMult": {
+          "preserve": "showOCCurveMult",
+          "shouldEncode": false
+        },
+        "showAOQCurveMult": {
+          "preserve": "showAOQCurveMult",
+          "shouldEncode": false
+        },
+        "showATICurveMult": {
+          "preserve": "showATICurveMult",
+          "shouldEncode": false
+        },
+        "showASNCurveMult": {
+          "preserve": "showASNCurveMult",
+          "shouldEncode": false
+        },
+        "lotSizeMult": {
+          "preserve": "lotSizeMult",
+          "shouldEncode": false
+        },
+        "distributionMult": {
+          "preserve": "distributionMult",
+          "shouldEncode": false
+        },
+        "assessPlanMult": {
+          "preserve": "assessPlanMult",
+          "shouldEncode": false
+        },
+        "aqlMult": {
+          "preserve": "aqlMult",
+          "shouldEncode": false
+        },
+        "rqlMult": {
+          "preserve": "rqlMult",
+          "shouldEncode": false
+        },
+        "prod_riskMult": {
+          "preserve": "prod_riskMult",
+          "shouldEncode": false
+        },
+        "cons_riskMult": {
+          "preserve": "cons_riskMult",
+          "shouldEncode": false
+        },
+        "numberOfStages": {
+          "preserve": "numberOfStages",
+          "shouldEncode": false
+        },
+        "stages": {
+          "preserve": "stages",
+          "shouldEncode": false
+        }
+      }
+    },
+    "expected": {
+      "singlePlanAssessmentAcceptableQualityLevel": 0.027,
+      "singlePlanAssessmentRejectableQualityLevel": 0.093,
+      "singlePlanAssessmentProducerRisk": 0.043,
+      "singlePlanAssessmentConsumerRisk": 0.087,
+      "singlePlanProportionNonconformingFrom": 0,
+      "singlePlanProportionNonconformingTo": 0.21,
+      "singlePlanProportionNonconformingStep": 0.007,
+      "singlePlanSummaryTable": true,
+      "singlePlanOperatingCharacteristicCurve": false,
+      "singlePlanAverageOutgoingQualityCurve": true,
+      "singlePlanAverageTotalInspectionCurve": false,
+      "singlePlanAverageSampleNumberCurve": true,
+      "singlePlanAssessment": true,
+      "singlePlanLotSize": 750,
+      "singlePlanDistribution": "binomial",
+      "multiplePlanAssessmentAcceptableQualityLevel": 0.054,
+      "multiplePlanAssessmentRejectableQualityLevel": 0.186,
+      "multiplePlanAssessmentProducerRisk": 0.086,
+      "multiplePlanAssessmentConsumerRisk": 0.174,
+      "multiplePlanProportionNonconformingFrom": 0,
+      "multiplePlanProportionNonconformingTo": 0.42,
+      "multiplePlanProportionNonconformingStep": 0.014,
+      "multiplePlanSummaryTable": true,
+      "multiplePlanOperatingCharacteristicCurve": false,
+      "multiplePlanAverageOutgoingQualityCurve": true,
+      "multiplePlanAverageTotalInspectionCurve": false,
+      "multiplePlanAverageSampleNumberCurve": true,
+      "multiplePlanAssessment": true,
+      "multiplePlanLotSize": 1500,
+      "multiplePlanDistribution": "hypergeometric",
+      "singlePlanSampleSize": 53,
+      "singlePlanAcceptanceNumber": 2,
+      "singlePlanRejectionNumber": 3,
+      "multiplePlanStagesCount": 3,
+      "multiplePlanStages": [
+        {
+          "value": "1",
+          "sampleSize": 31,
+          "acceptanceNumber": 0,
+          "rejectionNumber": 2,
+          "note": "retain first row"
+        },
+        {
+          "value": "2",
+          "sampleSize": 47,
+          "acceptanceNumber": 2,
+          "rejectionNumber": 5
+        },
+        {
+          "value": "3",
+          "sampleSize": 59,
+          "acceptanceNumber": 6,
+          "rejectionNumber": 7
+        }
+      ],
+      "unrelatedOption": {
+        "enabled": false,
+        "text": "retained",
+        "values": [
+          0,
+          null,
+          3
+        ]
+      },
+      ".meta": {
+        "singlePlanProportionNonconformingFrom": {
+          "preserve": "pd_lowerSingle",
+          "shouldEncode": false
+        },
+        "singlePlanProportionNonconformingTo": {
+          "preserve": "pd_upperSingle",
+          "shouldEncode": false
+        },
+        "singlePlanProportionNonconformingStep": {
+          "preserve": "pd_stepSingle",
+          "shouldEncode": false
+        },
+        "singlePlanSummaryTable": {
+          "preserve": "showSummarySingle",
+          "shouldEncode": false
+        },
+        "singlePlanOperatingCharacteristicCurve": {
+          "preserve": "showOCCurveSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAverageOutgoingQualityCurve": {
+          "preserve": "showAOQCurveSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAverageTotalInspectionCurve": {
+          "preserve": "showATICurveSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAverageSampleNumberCurve": {
+          "preserve": "showASNCurveSingle",
+          "shouldEncode": false
+        },
+        "singlePlanLotSize": {
+          "preserve": "lotSizeSingle",
+          "shouldEncode": false
+        },
+        "singlePlanDistribution": {
+          "preserve": "distributionSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAssessment": {
+          "preserve": "assessPlanSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAssessmentAcceptableQualityLevel": {
+          "preserve": "aqlSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAssessmentRejectableQualityLevel": {
+          "preserve": "rqlSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAssessmentProducerRisk": {
+          "preserve": "prod_riskSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAssessmentConsumerRisk": {
+          "preserve": "cons_riskSingle",
+          "shouldEncode": false
+        },
+        "singlePlanSampleSize": {
+          "preserve": "sampleSizeSingle",
+          "shouldEncode": false
+        },
+        "singlePlanAcceptanceNumber": {
+          "preserve": "acceptNumberSingle",
+          "shouldEncode": false
+        },
+        "singlePlanRejectionNumber": {
+          "preserve": "rejectNumberSingle",
+          "shouldEncode": false
+        },
+        "multiplePlanProportionNonconformingFrom": {
+          "preserve": "pd_lowerMult",
+          "shouldEncode": false
+        },
+        "multiplePlanProportionNonconformingTo": {
+          "preserve": "pd_upperMult",
+          "shouldEncode": false
+        },
+        "multiplePlanProportionNonconformingStep": {
+          "preserve": "pd_stepMult",
+          "shouldEncode": false
+        },
+        "multiplePlanSummaryTable": {
+          "preserve": "showSummaryMult",
+          "shouldEncode": false
+        },
+        "multiplePlanOperatingCharacteristicCurve": {
+          "preserve": "showOCCurveMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAverageOutgoingQualityCurve": {
+          "preserve": "showAOQCurveMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAverageTotalInspectionCurve": {
+          "preserve": "showATICurveMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAverageSampleNumberCurve": {
+          "preserve": "showASNCurveMult",
+          "shouldEncode": false
+        },
+        "multiplePlanLotSize": {
+          "preserve": "lotSizeMult",
+          "shouldEncode": false
+        },
+        "multiplePlanDistribution": {
+          "preserve": "distributionMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAssessment": {
+          "preserve": "assessPlanMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAssessmentAcceptableQualityLevel": {
+          "preserve": "aqlMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAssessmentRejectableQualityLevel": {
+          "preserve": "rqlMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAssessmentProducerRisk": {
+          "preserve": "prod_riskMult",
+          "shouldEncode": false
+        },
+        "multiplePlanAssessmentConsumerRisk": {
+          "preserve": "cons_riskMult",
+          "shouldEncode": false
+        },
+        "multiplePlanStagesCount": {
+          "preserve": "numberOfStages",
+          "shouldEncode": false
+        },
+        "multiplePlanStages": {
+          "preserve": "stages",
+          "shouldEncode": false
+        }
+      }
+    }
+  }
+]

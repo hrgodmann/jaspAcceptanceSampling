@@ -22,9 +22,9 @@ import JASP.Controls
 RadioButtonGroup
 {
 	title: qsTr("Distribution")
-	property string suffix: ""
-	name: "distribution" + suffix
-	RadioButton { value: "binom"; label: qsTr("Binomial"); checked: true }
-	RadioButton { value: "hypergeom"; label: qsTr("Hypergeometric") }
+	property string prefix: ""
+	name: (prefix === "" ? "distribution" : prefix + "Distribution")
+	RadioButton { value: "binomial"; label: qsTr("Binomial"); checked: true }
+	RadioButton { value: "hypergeometric"; label: qsTr("Hypergeometric") }
 	RadioButton { value: "poisson"; label: qsTr("Poisson") }
 }

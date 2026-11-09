@@ -2,7 +2,7 @@ test_that("precompiled models retain their draws when transferred to fresh worke
   old <- options(jaspAcceptanceSampling.allowStanFallback = FALSE)
   on.exit(options(old), add = TRUE)
   getModel <- getFromNamespace(".asSSM_getStanModel", "jaspAcceptanceSampling")
-  initialize <- getFromNamespace(".asSSM_mixtureInit", "jaspAcceptanceSampling")
+  initialize <- getFromNamespace(".asSSM_createMixtureInitialValues", "jaspAcceptanceSampling")
 
   sampleModel <- function(model, dat, initial) {
     fit <- rstan::sampling(model, data = dat, init = initial,

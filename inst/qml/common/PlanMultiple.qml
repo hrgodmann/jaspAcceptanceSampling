@@ -23,12 +23,12 @@ Group
 {
 	IntegerField
 	{ 
-		name: "lotSizeMult"; label: qsTr("Lot size (N)"); defaultValue: 1000; min: 1
+		name: "multiplePlanLotSize"; label: qsTr("Lot size (N)"); defaultValue: 1000; min: 1
 	}
 
 	IntegerField
 	{
-		name: "numberOfStages"; label: qsTr("Number of stages"); id: numberOfStages; defaultValue: 2; min: 2; max: 100
+		name: "multiplePlanStagesCount"; label: qsTr("Number of stages"); id: multiplePlanStagesCount; defaultValue: 2; min: 2; max: 100
 	}
 
 	ColumnLayout
@@ -44,10 +44,10 @@ Group
 
 		ComponentsList
 		{
-			name:								"stages"
-			id:									stages
+			name:								"multiplePlanStages"
+			id:									multiplePlanStages
 			addItemManually:					false
-			values:								numberOfStages.value
+			values:								multiplePlanStagesCount.value
 
 			rowComponent: 						RowLayout
 			{
@@ -67,9 +67,9 @@ Group
 
 					IntegerField
 					{
-						name: 					"sampleSizeMult"
+						name: 					"sampleSize"
 						label: 					""
-						id:						sampleSizeMult
+						id:						sampleSize
 						defaultValue:			30
 						min:					1
 						placeholderText:		qsTr("n %d").arg(rowIndex + 1)
@@ -84,7 +84,7 @@ Group
 					Layout.preferredWidth:		150 * preferencesModel.uiScale
 					IntegerField
 					{
-						name: 					"acceptNumberMult"
+						name: 					"acceptanceNumber"
 						label: 					""
 						defaultValue:			rowIndex * 3
 						min:					0
@@ -100,9 +100,9 @@ Group
 					Layout.preferredWidth:		150 * preferencesModel.uiScale
 					IntegerField
 					{
-						name: 					"rejectNumberMult"
+						name: 					"rejectionNumber"
 						label: 					""
-						defaultValue:			(rowIndex + 1) == stages.values ? (rowIndex * 3 + 1) : (rowIndex * 3 + 2)
+						defaultValue:			(rowIndex + 1) == multiplePlanStages.values ? (rowIndex * 3 + 1) : (rowIndex * 3 + 2)
 						min:					1
 						placeholderText:		qsTr("r %d").arg(rowIndex + 1)
 						fieldWidth:				50 * preferencesModel.uiScale

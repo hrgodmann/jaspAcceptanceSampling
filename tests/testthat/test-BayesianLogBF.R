@@ -6,12 +6,12 @@ test_that("Bayesian log probabilities and Bayes factors match high-precision ref
                        stringsAsFactors = FALSE)
   for (i in seq_len(nrow(fixtures))) {
     z <- fixtures[i, ]
-    prior <- jaspAcceptanceSampling:::.bsLogThreeRegionProbs(z$aql, z$rql, z$alpha, z$beta)
-    post <- jaspAcceptanceSampling:::.bsLogThreeRegionProbs(z$aql, z$rql,
+    prior <- jaspAcceptanceSampling:::.bsComputeLogThreeRegionProbabilities(z$aql, z$rql, z$alpha, z$beta)
+    post <- jaspAcceptanceSampling:::.bsComputeLogThreeRegionProbabilities(z$aql, z$rql,
                                                           z$alpha + z$d, z$beta + z$n - z$d)
-    binary <- jaspAcceptanceSampling:::.bsLogBF(rql = z$rql, n = z$n, c = z$d,
+    binary <- jaspAcceptanceSampling:::.bsComputeLogBayesFactor(rql = z$rql, n = z$n, c = z$d,
                                                alpha = z$alpha, beta = z$beta)
-    three <- jaspAcceptanceSampling:::.bsLogBFThreeHyp(aql = z$aql, rql = z$rql,
+    three <- jaspAcceptanceSampling:::.bsComputeThreeHypothesisLogBayesFactor(aql = z$aql, rql = z$rql,
                                                        n = z$n, d = z$d,
                                                        alpha = z$alpha, beta = z$beta)
     actual <- c(unname(prior), unname(post), binary$log_bf, unname(three))
@@ -46,7 +46,7 @@ test_that("all uniform-prior posterior counts have accurate finite log tails", {
   # Includes pbeta's finite-but-wrong and -Inf cases around Beta(9965,37),
   # plus both extreme quality limits permitted by the six-decimal controls.
   for (q in c(.000001, .1, .5, .999999)) {
-    actual <- jaspAcceptanceSampling:::.bsLogBetaTails(q, 1:10001, 10001:1)
+    actual <- jaspAcceptanceSampling:::.bsComputeLogBetaTails(q, 1:10001, 10001:1)
     expected <- .bsTestBinomialLogTails(10001, q)
     expect_true(all(is.finite(actual$lower) & is.finite(actual$upper)))
     expect_true(max(abs(actual$lower - expected$lower), abs(actual$upper - expected$upper)) <
@@ -56,20 +56,20 @@ test_that("all uniform-prior posterior counts have accurate finite log tails", {
   reference <- .bsTestBinomialLogTails(10001, .5)
   counts <- 0:10000
   expectedC <- max(counts[reference$lower - reference$upper >= log(30)])
-  expect_equal(jaspAcceptanceSampling:::.bsAcceptanceNumber(
-    n = 10000, rql = .5, min_bf = 30, alpha = 1, beta = 1), expectedC)
+  expect_equal(jaspAcceptanceSampling:::.bsComputeAcceptanceNumber(
+    n = 10000, rql = .5, minimumBayesFactor = 30, alpha = 1, beta = 1), expectedC)
 })
 
 test_that("Bayesian plans recover evidence hidden by clipped extreme priors", {
   for (beta in c(100, 10000)) {
-    actual <- jaspAcceptanceSampling:::.bsLogBF(rql = .5, n = 1, c = 0,
+    actual <- jaspAcceptanceSampling:::.bsComputeLogBayesFactor(rql = .5, n = 1, c = 0,
                                                alpha = 1, beta = beta)
     # Exact BF is (2^(b+1)-1)/(2^b-1), indistinguishable from 2 here.
     expect_equal(actual$log_bf, log(2), tolerance = 1e-10)
-    expect_equal(jaspAcceptanceSampling:::.bsAcceptanceNumber(
-      n = 1, rql = .5, min_bf = 1.5, alpha = 1, beta = beta), 0)
+    expect_equal(jaspAcceptanceSampling:::.bsComputeAcceptanceNumber(
+      n = 1, rql = .5, minimumBayesFactor = 1.5, alpha = 1, beta = beta), 0)
     plans <- jaspAcceptanceSampling:::.bsGeneratePlans(aql = .05, rql = .5,
-                max_n = 1, min_bf = 1.5, alpha = 1, beta = beta)
+                maximumSampleSize = 1, minimumBayesFactor = 1.5, alpha = 1, beta = beta)
     expect_equal(plans$n, 1)
     expect_equal(plans$c, 0)
     expect_equal(plans$log_bf, log(2), tolerance = 1e-10)
@@ -81,16 +81,16 @@ test_that("exact acceptance ties survive roundoff while resolved differences rem
   # the exact BF is the integer 2^(n+1)-1 (all targets below are UI-valid).
   for (n in 1:12) {
     target <- 2^(n + 1) - 1
-    evidence <- jaspAcceptanceSampling:::.bsLogBF(rql = .5, n = n, c = 0,
+    evidence <- jaspAcceptanceSampling:::.bsComputeLogBayesFactor(rql = .5, n = n, c = 0,
                                                 alpha = 1, beta = 1)
     # The decision-tie allowance is not a general error bound for beta tails.
     # Check it here against exact analytic ties, separately from reference accuracy.
     expect_true(abs(evidence$log_bf - log(target)) <= evidence$tolerance,
                 info = sprintf("n = %d: tie error %.17g, allowance %.17g", n,
                                abs(evidence$log_bf - log(target)), evidence$tolerance))
-    expect_equal(jaspAcceptanceSampling:::.bsAcceptanceNumber(
-      n = n, rql = .5, min_bf = target, alpha = 1, beta = 1), 0)
-    reached <- jaspAcceptanceSampling:::.bsMeetsLogBF(
+    expect_equal(jaspAcceptanceSampling:::.bsComputeAcceptanceNumber(
+      n = n, rql = .5, minimumBayesFactor = target, alpha = 1, beta = 1), 0)
+    reached <- jaspAcceptanceSampling:::.bsMeetsLogBayesFactor(
       evidence$log_bf, log(target) + c(-1e-8, 0, 1e-8), evidence$tolerance)
     expect_equal(reached, c(TRUE, TRUE, FALSE))
   }

@@ -27,17 +27,17 @@ Form
 	VariablesForm
 	{
 		AvailableVariablesList	{ name: "allVariablesList"; id: allVariablesList }
-		AssignedVariablesList	{ name: "variables"; title: qsTr("Measurement"); id: variables; singleVariable: true; allowedColumns: ["scale"] }
+		AssignedVariablesList	{ name: "measurement"; title: qsTr("Measurement"); id: measurement; singleVariable: true; allowedColumns: ["scale"] }
 	}
 
 	Group
 	{
-		enabled: variables.count != 1
+		enabled: measurement.count != 1
 		Text { text: qsTr("Specify sample statistics directly (used if dataset is not available)") }
-		CheckBox { name: "sampleStats"; id: sampleStats; checked: (variables.count != 1); enabled: false; visible: false }
+		CheckBox { name: "sampleStatistics"; id: sampleStatistics; checked: (measurement.count != 1); enabled: false; visible: false }
 		IntegerField { name: "sampleSize"; label: qsTr("Sample size (n)"); defaultValue: 24; min: 1 }
 		DoubleField { name: "sampleMean"; label: qsTr("Sample mean"); defaultValue: 1.5; decimals: 6 }
-		DoubleField { name: "sampleSD"; label: qsTr("Sample standard deviation"); defaultValue: 1; min: 0; inclusive: JASP.None; decimals: 6 }
+		DoubleField { name: "sampleSd"; label: qsTr("Sample standard deviation"); defaultValue: 1; min: 0; inclusive: JASP.None; decimals: 6 }
 	}
 
 	// Todo: Label for k is a hacky solution to align it with the sample values. Adjust the width in code.
@@ -45,29 +45,29 @@ Form
 	
 	Group
 	{
-		title: qsTr("Specification limits")
+		title: qsTr("Specification Limits")
 		columns: 2
-		CheckBox { name: "lsl"; label: qsTr("Lower Specification Limit (LSL)"); id: lsl; checked: false }
-		DoubleField{ name: "lower_spec"; label: ""; id: lower_spec; defaultValue: 0; enabled: lsl.checked; negativeValues: true; max: upper_spec.value; inclusive: JASP.MaxOnly; decimals: 6 }
-		CheckBox { name: "usl"; label: qsTr("Upper Specification Limit (USL)"); id: usl; checked: false }
-		DoubleField { name: "upper_spec"; label: ""; id: upper_spec; defaultValue: 1; enabled: usl.checked; negativeValues: true; min: lower_spec.value; inclusive: JASP.MinOnly; decimals: 6 }
+		CheckBox { name: "lowerSpecificationLimit"; label: qsTr("Lower specification limit (LSL)"); id: lowerSpecificationLimit; checked: false }
+		DoubleField{ name: "lowerSpecificationLimitValue"; label: ""; id: lowerSpecificationLimitValue; defaultValue: 0; enabled: lowerSpecificationLimit.checked; negativeValues: true; max: upperSpecificationLimitValue.value; inclusive: JASP.MaxOnly; decimals: 6 }
+		CheckBox { name: "upperSpecificationLimit"; label: qsTr("Upper specification limit (USL)"); id: upperSpecificationLimit; checked: false }
+		DoubleField { name: "upperSpecificationLimitValue"; label: ""; id: upperSpecificationLimitValue; defaultValue: 1; enabled: upperSpecificationLimit.checked; negativeValues: true; min: lowerSpecificationLimitValue.value; inclusive: JASP.MinOnly; decimals: 6 }
 	}
 
 	Group
 	{
 		columns: 2
-		CheckBox { name: "sd"; label: qsTr("Standard deviation (historical)"); id: sd; checked: false }
-		DoubleField { name: "stdev"; label: ""; enabled: sd.checked; defaultValue: 1; min: 0; negativeValues: false; inclusive: JASP.None; decimals: 6 }
+		CheckBox { name: "historicalSdKnown"; label: qsTr("Standard deviation (historical)"); id: historicalSdKnown; checked: false }
+		DoubleField { name: "historicalSd"; label: ""; enabled: historicalSdKnown.checked; defaultValue: 1; min: 0; negativeValues: false; inclusive: JASP.None; decimals: 6 }
 	}
 
 	Group
 	{
-		title: qsTr("Quality constraints")
-		enabled: lsl.checked && usl.checked && sd.checked
+		title: qsTr("Quality Constraints")
+		enabled: lowerSpecificationLimit.checked && upperSpecificationLimit.checked && historicalSdKnown.checked
 		columns: 2
-		Text { text: qsTr("Acceptable Quality Level (AQL)") }
-		DoubleField{ name: "aql"; label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: JASP.None; decimals: 6 }
-		Text { text: qsTr("Rejectable Quality Level (RQL / LTPD)") }
-		DoubleField { name: "rql"; label: ""; negativeValues: false; defaultValue: 0.15; min: 0; max: 1; inclusive: JASP.None; decimals: 6 }
+		Text { text: qsTr("Acceptable quality level (AQL)") }
+		DoubleField{ name: "acceptableQualityLevel"; label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: JASP.None; decimals: 6 }
+		Text { text: qsTr("Rejectable quality level (RQL / LTPD)") }
+		DoubleField { name: "rejectableQualityLevel"; label: ""; negativeValues: false; defaultValue: 0.15; min: 0; max: 1; inclusive: JASP.None; decimals: 6 }
 	}
 }

@@ -1,12 +1,12 @@
-.asSSM_predictorNames <- function(options) {
+.asSSM_getPredictorNames <- function(options) {
   # A saved single selection is a string; multiple selections are a character vector.
   predictors <- options[["covariates"]]
   if (!length(predictors)) return(character())
   predictors[nzchar(predictors)]
 }
 
-.asSSM_predictorDesign <- function(dataset, options) {
-  predictors <- .asSSM_predictorNames(options)
+.asSSM_createPredictorDesign <- function(dataset, options) {
+  predictors <- .asSSM_getPredictorNames(options)
   if (!length(predictors))
     return(list(names = character(), labels = character(), center = numeric(),
                 scale = numeric(), X = matrix(numeric(), nrow(dataset), 0L)))
@@ -21,7 +21,7 @@
   )
 }
 
-.asSSM_betaLabels <- function(parameters, design) {
+.asSSM_getBetaLabels <- function(parameters, design) {
   labels <- parameters
   beta <- grep("^beta_predictor\\[[0-9]+\\]$", parameters)
   if (length(beta)) {

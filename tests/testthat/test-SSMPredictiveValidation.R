@@ -1,15 +1,15 @@
-.ssm_predictive_api <- function() {
+.ssmPredictiveApi <- function() {
   list(
-    pmf = getFromNamespace(".asSSM_predictivePMF", "jaspAcceptanceSampling"),
-    validate = getFromNamespace(".asSSM_validatePMF", "jaspAcceptanceSampling"),
-    below = getFromNamespace(".asSSM_pmfMassBelow", "jaspAcceptanceSampling"),
-    above = getFromNamespace(".asSSM_pmfMassAbove", "jaspAcceptanceSampling"),
-    median = getFromNamespace(".asSSM_pmfMedian", "jaspAcceptanceSampling")
+    pmf = getFromNamespace(".asSSM_computePredictivePmf", "jaspAcceptanceSampling"),
+    validate = getFromNamespace(".asSSM_validatePmf", "jaspAcceptanceSampling"),
+    below = getFromNamespace(".asSSM_computePmfMassBelow", "jaspAcceptanceSampling"),
+    above = getFromNamespace(".asSSM_computePmfMassAbove", "jaspAcceptanceSampling"),
+    median = getFromNamespace(".asSSM_computePmfMedian", "jaspAcceptanceSampling")
   )
 }
 
 test_that("valid predictive draws retain their exact empirical weights and finite-lot support", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   pmf <- api$pmf(c(4, 5, 5, 6), sT = 1000, nT = 998, yT = 4)
   expect_equal(pmf$defects, 4:6)
   expect_equal(pmf$prob[pmf$defects %in% 4:6], c(0.25, 0.5, 0.25))
@@ -21,7 +21,7 @@ test_that("valid predictive draws retain their exact empirical weights and finit
 })
 
 test_that("zero inspection, full inspection and a zero-sized lot have valid predictive PMFs", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   uninspected <- api$pmf(c(0, 0, 1, 2), sT = 2, nT = 0, yT = 0)
   expect_equal(uninspected$defects, 0:2)
   expect_equal(uninspected$prob, c(0.5, 0.25, 0.25))
@@ -35,7 +35,7 @@ test_that("zero inspection, full inspection and a zero-sized lot have valid pred
 })
 
 test_that("empty, nonfinite and nonnumeric draws are rejected without dropping or coercion", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   invalid <- list(
     NULL, numeric(0), c(NA_real_, NA_real_), c(4, NA_real_, 5),
     c(4, NaN, 5), c(4, Inf), c(4, -Inf), c("4", "5"),
@@ -46,7 +46,7 @@ test_that("empty, nonfinite and nonnumeric draws are rejected without dropping o
 })
 
 test_that("fractional and impossible predictive counts are rejected rather than repaired", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   # Four observed defects plus two uninspected items imply support exactly 4:6.
   for (draws in list(c(4, 4.5, 5), c(4, 5 + 1e-10), c(3, 4), c(6, 7), c(-1, 4), c(4, 1001)))
     expect_error(api$pmf(draws, sT = 1000, nT = 998, yT = 4))
@@ -56,11 +56,11 @@ test_that("fractional and impossible predictive counts are rejected rather than 
 })
 
 test_that("lot information must be supplied as valid scalar integer counts", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   expect_error(api$pmf(c(4, 5), sT = 1000))
   for (field in c("sT", "nT", "yT")) {
     for (value in list(NULL, numeric(0), c(1, 2), NA_real_, Inf, -1, 0.5, "1", TRUE, 1 + 0i)) {
-      arguments <- list(y_pred_draws = c(4, 5), sT = 1000, nT = 78, yT = 4)
+      arguments <- list(predictiveDraws = c(4, 5), sT = 1000, nT = 78, yT = 4)
       arguments[field] <- list(value)
       expect_error(do.call(api$pmf, arguments))
     }
@@ -72,7 +72,7 @@ test_that("lot information must be supplied as valid scalar integer counts", {
 })
 
 test_that("PMF validation rejects malformed support or invalid probability measures", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   invalid <- list(
     NULL,
     data.frame(defects = numeric(0), prob = numeric(0)),
@@ -103,7 +103,7 @@ test_that("PMF validation rejects malformed support or invalid probability measu
 })
 
 test_that("validated predictive masses retain strict AQL and RQL boundaries", {
-  api <- .ssm_predictive_api()
+  api <- .ssmPredictiveApi()
   pmf <- api$pmf(c(4, 5, 5, 6), sT = 1000, nT = 998, yT = 4)
   thresholds <- c(3.5, 4, 4.5, 5, 5.5, 6, 6.5)
   expect_equal(vapply(thresholds, function(x) api$below(pmf, x), numeric(1)),
@@ -118,7 +118,7 @@ test_that("validated predictive masses retain strict AQL and RQL boundaries", {
 
 test_that("decision notes follow strict rules and changed thresholds without refitting or accumulation", {
   ns <- asNamespace("jaspAcceptanceSampling")
-  original <- get("bayesianSSMforASInternal", ns)
+  original <- get(".asSSM_runAnalysis", ns)
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(defectCount = "y", sampleSize = "n", lotSize = "s",
                       lotNumber = "lot", covariates = character())
@@ -126,8 +126,8 @@ test_that("decision notes follow strict rules and changed thresholds without ref
     if (!length(columns)) return(columns)
     list(value = columns, types = as.list(rep("scale", length(columns))))
   })
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "plotPredictorCoefficient", "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
   options$settingsAcceptableQualityLevel <- .04
   options$settingsRejectableQualityLevel <- .06
@@ -135,14 +135,14 @@ test_that("decision notes follow strict rules and changed thresholds without ref
   options$settingsRejectionThreshold <- .15
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
-  fixture_data <- data.frame(y = 0, n = 0, s = 100, lot = 1)
-  utils::write.csv(fixture_data, csv, row.names = FALSE)
+  fixtureData <- data.frame(y = 0, n = 0, s = 100, lot = 1)
+  utils::write.csv(fixtureData, csv, row.names = FALSE)
   generations <- 0L
   visited <- 0L
-  fit_fixture <- function(jaspResults, dataset, options) {
+  fitFixture <- function(jaspResults, dataset, options) {
     if (is.null(jaspResults[["fit"]])) {
       state <- jaspBase::createJaspState()
-      state$dependOn(get(".asSSM_fitDependencies", ns)())
+      state$dependOn(get(".asSSM_getFitDependencies", ns)())
       jaspResults[["fit"]] <- state
     }
     if (!is.null(jaspResults[["fit"]]$object)) return()
@@ -197,10 +197,10 @@ test_that("decision notes follow strict rules and changed thresholds without ref
     }
   }
   testthat::local_mocked_bindings(
-    .asSSM_fitModel = fit_fixture,
+    .asSSM_fitModel = fitFixture,
     .asSSM_reportDiagnostics = function(...) invisible(NULL),
     .asSSM_getStanModel = function(...) stop("Decision-note fixtures must not load Stan."),
-    bayesianSSMforASInternal = wrapper,
+    .asSSM_runAnalysis = wrapper,
     .package = "jaspAcceptanceSampling")
   result <- jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE)
   expect_identical(result$status, "complete")

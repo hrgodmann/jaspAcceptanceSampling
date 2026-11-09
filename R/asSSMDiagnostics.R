@@ -56,7 +56,7 @@
   }, error = function(e) list(error = conditionMessage(e), sampler_params = samplerParams))
 }
 
-.asSSM_diagnosticMessages <- function(diagnostics) {
+.asSSM_createDiagnosticMessages <- function(diagnostics) {
   if (is.null(diagnostics))
     return(gettext("Computational diagnostics are unavailable for this cached fit. Refit the analysis before relying on its decisions."))
   if (!is.null(diagnostics$error))
@@ -69,11 +69,11 @@
   if (d$chains != d$expected_chains)
     messages <- c(messages, gettextf("Only %1$d of %2$d requested chains are available. Inspect the sampler output for failed chains and refit before relying on the results.", d$chains, d$expected_chains))
   if (d$thin > 1L)
-    messages <- c(messages, gettext("Thinning is enabled. Divergence and treedepth counts cover only retained transitions, so other events may be missed; E-BFMI is unavailable. Rerun with Thin = 1 for complete sampler checks."))
+    messages <- c(messages, gettext("Thinning is enabled. Divergence and treedepth counts cover only retained transitions, so other events may be missed; E-BFMI is unavailable. Rerun with Thinning = 1 for complete sampler checks."))
   if (anyNA(s$divergences) || anyNA(s$treedepth_hits))
     messages <- c(messages, gettext("Sampler diagnostics are unavailable for one or more chains. Missing checks are not evidence of successful sampling; refit and inspect the sampler output."))
   if (any(s$divergences > 0, na.rm = TRUE))
-    messages <- c(messages, gettextf("Detected %1$d divergent transitions in the available retained post-warmup records. Estimates may be biased. Review the model, priors and sampler settings before relying on the results; increasing Adapt Delta may help. No divergent draws were removed.", sum(s$divergences, na.rm = TRUE)))
+    messages <- c(messages, gettextf("Detected %1$d divergent transitions in the available retained post-warmup records. Estimates may be biased. Review the model, priors and sampler settings before relying on the results; increasing Adapt delta may help. No divergent draws were removed.", sum(s$divergences, na.rm = TRUE)))
   if (any(s$treedepth_hits > 0, na.rm = TRUE))
     messages <- c(messages, gettextf("The maximum treedepth was reached in %1$d retained post-warmup iterations. This can reduce sampling efficiency. Inspect mixing and the model before considering a higher treedepth limit.", sum(s$treedepth_hits, na.rm = TRUE)))
   if (d$chains < 2L)
@@ -109,8 +109,8 @@
   messages
 }
 
-.asSSM_diagnosticHtml <- function(diagnostics, details = TRUE) {
-  messages <- .asSSM_diagnosticMessages(diagnostics)
+.asSSM_createDiagnosticHtml <- function(diagnostics, details = TRUE) {
+  messages <- .asSSM_createDiagnosticMessages(diagnostics)
   text <- if (length(messages)) paste0("<p><b>", gettext("Sampling requires attention."),
     "</b></p><ul><li>", paste(messages, collapse = "</li><li>"), "</li></ul>") else
     paste0("<p>", gettext("No diagnostic thresholds were exceeded. These checks do not prove convergence."), "</p>")
@@ -141,14 +141,14 @@
   fit <- jaspResults[["fit"]]
   if (is.null(fit) || is.null(fit$object)) return()
 
-  printDiagnostics <- isTRUE(options[["mcmcDiagnosticsPrint"]])
+  printDiagnostics <- isTRUE(options[["mcmcDiagnosticReport"]])
   diagnostics <- fit$object$diagnostics
-  if (!printDiagnostics && !length(.asSSM_diagnosticMessages(diagnostics))) return()
+  if (!printDiagnostics && !length(.asSSM_createDiagnosticMessages(diagnostics))) return()
 
   jaspResults[["samplerDiagnostics"]] <- createJaspHtml(
-    text = .asSSM_diagnosticHtml(diagnostics, details = printDiagnostics), elementType = "div",
+    text = .asSSM_createDiagnosticHtml(diagnostics, details = printDiagnostics), elementType = "div",
     title = if (printDiagnostics) gettext("Computational Diagnostics") else gettext("Sampling Warnings"),
     # Result positions are integers; keep the full report after coefficient plots.
     position = if (printDiagnostics) 5 else -1,
-    dependencies = c(.asSSM_fitDependencies(), "mcmcDiagnosticsPrint"))
+    dependencies = c(.asSSM_getFitDependencies(), "mcmcDiagnosticReport"))
 }

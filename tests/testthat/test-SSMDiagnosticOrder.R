@@ -7,9 +7,9 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
     if (!length(columns)) return(columns)
     list(value = columns, types = as.list(rep("scale", length(columns))))
   })
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "plotsPredictorCoefficients", "mcmcDiagnosticsPrint", "mcmcDiagnosticsOverviewTable",
-                 "mcmcDiagnosticsOverviewTheta", "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "plotPredictorCoefficient", "mcmcDiagnosticReport", "mcmcDiagnosticOverviewTable",
+                 "mcmcDiagnosticOverviewTheta", "mcmcDiagnosticOverviewSigma", "mcmcDiagnosticOverviewPrediction", "mcmcDiagnosticOverviewBeta"))
     options[[name]] <- TRUE
   dataset <- data.frame(count = c(1, 0, 2, 1), n = 20, s = 100, lot = 1:4,
                         temperature = c(-2, -1, 0, 1), humidity = c(1, 0, -1, 2))
@@ -23,13 +23,13 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
   fit <- function(jaspResults, dataset, options) {
     if (is.null(jaspResults[["fit"]])) {
       state <- jaspBase::createJaspState()
-      state$dependOn(get(".asSSM_fitDependencies", ns)())
+      state$dependOn(get(".asSSM_getFitDependencies", ns)())
       jaspResults[["fit"]] <- state
     }
     if (!is.null(jaspResults[["fit"]]$object)) return()
     generations <<- generations + 1L
     z <- stats::qnorm(stats::ppoints(1000))
-    design <- get(".asSSM_predictorDesign", ns)(dataset, options)
+    design <- get(".asSSM_createPredictorDesign", ns)(dataset, options)
     pars <- c(paste0("theta[", seq_len(nrow(dataset)), "]"), "sigma_eta", "y_pred",
               "beta_predictor[1]", "beta_predictor[2]")
     sm <- matrix(rep(c(.1, .02, 1000, 1), each = length(pars)),
@@ -46,7 +46,7 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
                      beta_predictor = cbind(.5 + .1 * z, -.5 + .1 * z)),
       predictor_design = design, summary = sm, diagnostics = diagnostics)
   }
-  original <- get("bayesianSSMforASInternal", ns)
+  original <- get(".asSSM_runAnalysis", ns)
   observed <- list()
   reused <- FALSE
   reusedPosition <- NULL
@@ -70,7 +70,7 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
     for (name in c("warnings", "fullAgain", "healthyOff", "priorChange")) {
       # Display changes reuse the fit; changing its prior must invalidate it.
       if (identical(name, "priorChange")) options$modelInnovationPriorScale <- 2
-      options$mcmcDiagnosticsPrint <- identical(name, "fullAgain")
+      options$mcmcDiagnosticReport <- identical(name, "fullAgain")
       if (identical(name, "healthyOff")) {
         stored <- jaspResults[["fit"]]$object
         stored$diagnostics$sampler$divergences[] <- 0L
@@ -90,7 +90,7 @@ test_that("computational diagnostics follow all plots and precede a reused MCMC 
   }
   result <- testthat::with_mocked_bindings(
     jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE),
-    .asSSM_fitModel = fit, bayesianSSMforASInternal = wrapper,
+    .asSSM_fitModel = fit, .asSSM_runAnalysis = wrapper,
     .asSSM_getStanModel = function(...) stop("The output fixture must not load Stan."),
     .package = "jaspAcceptanceSampling")
   expect_identical(result$status, "complete")

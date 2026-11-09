@@ -1,8 +1,8 @@
 test_that("sparse empirical support preserves dense-reference masses and lower discrete medians", {
-  pmf <- getFromNamespace(".asSSM_predictivePMF", "jaspAcceptanceSampling")
-  below <- getFromNamespace(".asSSM_pmfMassBelow", "jaspAcceptanceSampling")
-  above <- getFromNamespace(".asSSM_pmfMassAbove", "jaspAcceptanceSampling")
-  median <- getFromNamespace(".asSSM_pmfMedian", "jaspAcceptanceSampling")
+  pmf <- getFromNamespace(".asSSM_computePredictivePmf", "jaspAcceptanceSampling")
+  below <- getFromNamespace(".asSSM_computePmfMassBelow", "jaspAcceptanceSampling")
+  above <- getFromNamespace(".asSSM_computePmfMassAbove", "jaspAcceptanceSampling")
+  median <- getFromNamespace(".asSSM_computePmfMedian", "jaspAcceptanceSampling")
   cases <- list(
     list(draws = c(9, 2, 9, 2), s = 10, n = 0, y = 0),
     list(draws = c(6, 4, 5, 5, 4, 6, 6), s = 10, n = 8, y = 4),
@@ -29,10 +29,10 @@ test_that("sparse empirical support preserves dense-reference masses and lower d
 })
 
 test_that("large allowed lots use memory proportional to observed predictive support", {
-  pmf <- getFromNamespace(".asSSM_predictivePMF", "jaspAcceptanceSampling")
-  below <- getFromNamespace(".asSSM_pmfMassBelow", "jaspAcceptanceSampling")
-  above <- getFromNamespace(".asSSM_pmfMassAbove", "jaspAcceptanceSampling")
-  median <- getFromNamespace(".asSSM_pmfMedian", "jaspAcceptanceSampling")
+  pmf <- getFromNamespace(".asSSM_computePredictivePmf", "jaspAcceptanceSampling")
+  below <- getFromNamespace(".asSSM_computePmfMassBelow", "jaspAcceptanceSampling")
+  above <- getFromNamespace(".asSSM_computePmfMassAbove", "jaspAcceptanceSampling")
+  median <- getFromNamespace(".asSSM_computePmfMedian", "jaspAcceptanceSampling")
   # Fail safely before the large case if dense allocation is accidentally restored.
   if (nrow(pmf(c(0, 1), 100, 0, 0)) != 2L)
     stop("Sparse support is required before testing the maximum allowed lot size.")
@@ -57,19 +57,19 @@ test_that("predictive plots retain empty bins and exact weights for sparse and c
   ns <- asNamespace("jaspAcceptanceSampling")
   fixture <- new.env(parent = emptyenv())
   fixture$draws <- NULL
-  fit_fixture <- function(jaspResults, dataset, options) {
+  fitFixture <- function(jaspResults, dataset, options) {
     error <- get(".asSSM_validateInputs", ns)(dataset, options)
     if (!is.null(error)) {
       get(".asSSM_setAnalysisError", ns)(jaspResults, error)
       return()
     }
     state <- jaspBase::createJaspState()
-    state$dependOn(get(".asSSM_fitDependencies", ns)())
+    state$dependOn(get(".asSSM_getFitDependencies", ns)())
     jaspResults[["fit"]] <- state
     jaspResults[["fit"]]$object <- list(samples = list(y_pred = fixture$draws))
   }
   testthat::local_mocked_bindings(
-    .asSSM_fitModel = fit_fixture,
+    .asSSM_fitModel = fitFixture,
     .asSSM_reportDiagnostics = function(...) invisible(NULL),
     .asSSM_getStanModel = function(...) stop("Predictive plotting fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
@@ -79,15 +79,15 @@ test_that("predictive plots retain empty bins and exact weights for sparse and c
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
-                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotLatestDefectRate", "plotPredictorCoefficient",
+                 "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
-  options$plotsPosteriorPredictive <- TRUE
+  options$plotPosteriorPredictive <- TRUE
   options$settingsAcceptableQualityLevel <- .025
   options$settingsRejectableQualityLevel <- .1
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
-  if (nrow(get(".asSSM_predictivePMF", ns)(c(0, 1), 100, 0, 0)) != 2L)
+  if (nrow(get(".asSSM_computePredictivePmf", ns)(c(0, 1), 100, 0, 0)) != 2L)
     stop("Sparse support is required before plotting the maximum allowed lot size.")
   largest <- .Machine$integer.max - 1L
   cases <- list(

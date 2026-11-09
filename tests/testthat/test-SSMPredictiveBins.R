@@ -1,13 +1,13 @@
-.ssm_predictive_bin_plot <- function(draws, lotSize, inspected = 0, defects = 0) {
+.ssmPredictiveBinPlot <- function(draws, lotSize, inspected = 0, defects = 0) {
   ns <- asNamespace("jaspAcceptanceSampling")
-  fit_fixture <- function(jaspResults, dataset, options) {
+  fitFixture <- function(jaspResults, dataset, options) {
     state <- jaspBase::createJaspState()
-    state$dependOn(get(".asSSM_fitDependencies", ns)())
+    state$dependOn(get(".asSSM_getFitDependencies", ns)())
     jaspResults[["fit"]] <- state
     state$object <- list(samples = list(y_pred = draws))
   }
   testthat::local_mocked_bindings(
-    .asSSM_fitModel = fit_fixture,
+    .asSSM_fitModel = fitFixture,
     .asSSM_reportDiagnostics = function(...) invisible(NULL),
     .asSSM_getStanModel = function(...) stop("Predictive bin fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
@@ -17,10 +17,10 @@
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
-                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotLatestDefectRate", "plotPredictorCoefficient",
+                 "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
-  options$plotsPosteriorPredictive <- TRUE
+  options$plotPosteriorPredictive <- TRUE
   options$settingsAcceptableQualityLevel <- .05
   options$settingsRejectableQualityLevel <- .1
   csv <- tempfile(fileext = ".csv")
@@ -37,7 +37,7 @@
 
 test_that("short predictive ranges show one complete bar per integer count", {
   draws <- rep(0:20, each = 100)
-  plot <- .ssm_predictive_bin_plot(draws, 60)
+  plot <- .ssmPredictiveBinPlot(draws, 60)
   bars <- ggplot2::ggplot_build(plot)$data[[1L]]
   expect_equal(bars$x, 0:20)
   expect_equal(bars$y, rep(1 / 21, 21))
@@ -49,7 +49,7 @@ test_that("short predictive ranges show one complete bar per integer count", {
 test_that("grouped predictive bins represent equal numbers of counts without artificial peaks", {
   # Stratified quantiles provide a smooth binomial PMF without simulation noise.
   draws <- stats::qbinom((seq_len(20000) - .5) / 20000, 400, .05)
-  plot <- .ssm_predictive_bin_plot(draws, 400)
+  plot <- .ssmPredictiveBinPlot(draws, 400)
   bars <- ggplot2::ggplot_build(plot)$data[[1L]]
   expect_lte(nrow(bars), 30L)
   widths <- bars$xmax - bars$xmin
@@ -68,7 +68,7 @@ test_that("grouped predictive bins represent equal numbers of counts without art
 
 test_that("displayed predictive mass is not renormalized when extreme tails are outside the plot", {
   draws <- c(rep(20, 9999), 1000)
-  plot <- .ssm_predictive_bin_plot(draws, 1000)
+  plot <- .ssmPredictiveBinPlot(draws, 1000)
   bars <- ggplot2::ggplot_build(plot)$data[[1L]]
   expect_equal(sum(bars$y), .9999)
   expect_true(all(is.finite(bars$xmin) & is.finite(bars$xmax)))
@@ -79,7 +79,7 @@ test_that("zero counts and complete inspection keep their full probability bars"
   cases <- list(c(s = 0, n = 0, y = 0), c(s = 100, n = 0, y = 0),
                 c(s = 100, n = 100, y = 7), c(s = 100, n = 100, y = 100))
   for (case in cases) {
-    plot <- .ssm_predictive_bin_plot(rep(case[["y"]], 100),
+    plot <- .ssmPredictiveBinPlot(rep(case[["y"]], 100),
       case[["s"]], case[["n"]], case[["y"]])
     bars <- ggplot2::ggplot_build(plot)$data[[1L]]
     expect_lte(nrow(bars), 30L)

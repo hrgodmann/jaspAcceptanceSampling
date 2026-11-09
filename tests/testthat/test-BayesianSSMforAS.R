@@ -9,16 +9,16 @@ test_that("BayesianSSMforAS - analysis uses time-sorted data", {
   options$lotNumber <- "time"
   options$covariates <- ""
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- FALSE
-  options$mcmcDiagnosticsOverviewTable <- FALSE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- FALSE
+  options$mcmcDiagnosticOverviewTable <- FALSE
 
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
@@ -39,7 +39,7 @@ test_that("BayesianSSMforAS - analysis uses time-sorted data", {
   expect_true("summaryTable" %in% names(results$results))
   expect_equal(results$results$summaryTable$data[[1]]$t, "30")
   expect_equal(results$results$summaryTable$data[[1]]$y, 3)
-  expect_false(options$mcmcDiagnosticsPrint)
+  expect_false(options$mcmcDiagnosticReport)
   expect_true("samplerDiagnostics" %in% names(results$results))
 })
 
@@ -49,8 +49,8 @@ test_that("BayesianSSMforAS - options load", {
   expect_true(is.list(options))
   expect_true("defectCount" %in% names(options))
   # An empty optional selector may be omitted from the generated options.
-  expect_length(getFromNamespace(".asSSM_predictorNames", "jaspAcceptanceSampling")(options), 0L)
-  expect_identical(options$mcmcDiagnosticsPrint, FALSE)
+  expect_length(getFromNamespace(".asSSM_getPredictorNames", "jaspAcceptanceSampling")(options), 0L)
+  expect_identical(options$mcmcDiagnosticReport, FALSE)
   expect_equal(options$advancedMcmcAdaptDelta, 0.97)
   expect_equal(options$advancedMcmcMaxTreeDepth, 15)
   expect_false("ssm_scaleModel" %in% names(options))
@@ -67,19 +67,19 @@ test_that("BayesianSSMforAS - an empty predictor selects the base model", {
   options$covariates <- ""
   options$ssm_scaleModel <- "WithPredictor" # Obsolete saved selector is ignored.
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- TRUE
-  options$mcmcDiagnosticsOverviewTable <- TRUE
-  options$mcmcDiagnosticsOverviewSigma <- TRUE
-  options$mcmcDiagnosticsOverviewBeta <- TRUE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- TRUE
+  options$mcmcDiagnosticOverviewTable <- TRUE
+  options$mcmcDiagnosticOverviewSigma <- TRUE
+  options$mcmcDiagnosticOverviewBeta <- TRUE
 
   # Keep test runtime short while still exercising Stan sampling and result wiring.
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
@@ -120,16 +120,16 @@ test_that("BayesianSSMforAS - predictive summary is deterministic across reruns"
   options$lotNumber <- "time"
   options$covariates <- ""
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- FALSE
-  options$mcmcDiagnosticsOverviewTable <- FALSE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- FALSE
+  options$mcmcDiagnosticOverviewTable <- FALSE
 
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
@@ -166,16 +166,16 @@ test_that("BayesianSSMforAS - invalid lot inputs fail gracefully before Stan", {
   options$lotNumber <- list(value = "time", types = list("scale"))
   options$covariates <- ""
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- FALSE
-  options$mcmcDiagnosticsOverviewTable <- FALSE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- FALSE
+  options$mcmcDiagnosticOverviewTable <- FALSE
 
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
@@ -208,16 +208,16 @@ test_that("BayesianSSMforAS - constant predictor fails gracefully before Stan", 
   options$lotNumber <- "time"
   options$covariates <- "temp"
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- FALSE
-  options$mcmcDiagnosticsOverviewTable <- FALSE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- FALSE
+  options$mcmcDiagnosticOverviewTable <- FALSE
 
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
@@ -252,17 +252,17 @@ test_that("BayesianSSMforAS - assigning a predictor selects the predictor model 
   options$covariates <- "temp"
   options$ssm_scaleModel <- "WithoutPredictor" # Obsolete saved selector is ignored.
 
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- FALSE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- TRUE
-  options$mcmcDiagnosticsOverviewTable <- TRUE
-  options$mcmcDiagnosticsOverviewBeta <- TRUE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- FALSE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- TRUE
+  options$mcmcDiagnosticOverviewTable <- TRUE
+  options$mcmcDiagnosticOverviewBeta <- TRUE
 
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 123
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8

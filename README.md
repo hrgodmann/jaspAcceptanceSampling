@@ -42,12 +42,49 @@ The organization of the analyses within the Acceptance Sampling module in JASP i
 
 **Visualization:** OC curves, AOQ curves, ATI curves, ASN curves for classical plans. Prior/posterior density plots, posterior predictive distributions, and state trajectory plots for Bayesian analyses.
 
+## Example Data
+
+[`examples/data_with_predictor.csv`](examples/data_with_predictor.csv) provides
+50 simulated lots for trying the Bayesian analyses. Each lot contains 1,000 items,
+of which 78 were inspected. The file is copied unchanged from
+`BayesianLotSampling/codeRevision/SimData/data_with_predictor.csv`.
+The `temperature` column is a standardized simulated covariate, not a temperature
+measurement in degrees.
+
+Open the CSV in JASP, then select **Acceptance Sampling > Bayesian State-Space
+Sampling**. Set the columns' measurement types to **Scale** and assign them as
+follows (Lot Number also accepts numeric **Ordinal** values):
+
+| Analysis field | CSV column |
+| --- | --- |
+| Defect Count | `defects_sampled` |
+| Sample Size (Tested Items) | `length_samples` |
+| Lot Size (Total Items) | `length_batches` |
+| Lot Number | `N_window` |
+| Covariates (Optional) | `temperature` |
+
+Leave Covariates empty to try the model without a predictor, then assign
+`temperature` to try the predictor model. Keep the other settings at their
+defaults initially. The current lot is number 50, with 9 observed defects in
+78 inspected items. Assigning `temperature` adds the Predictor Coefficients
+table; the Plots section offers the state trajectory, posterior predictive and
+coefficient plots.
+
+For **Bayesian Sampling**, select **Posterior distribution** under **Inference**
+and enter the last lot's summary counts: 9 observed defects, a sample size of 78
+and a lot size of 1,000. Select **Inference decision table** to display the result.
+This analysis uses summary inputs rather than column assignments.
+
+The CSV and the existing `BaySSM.jasp` and `BaySampl.jasp` files are repository
+examples to download and open directly. They are not automatically added to
+JASP's Data Library or installed with the R package.
+
 ## Maintainers
 
 - Henrik Godmann (Bayesian analyses)
 - JASP Team (Classical analyses)
 
-## Developing the Stan models
+## Developing the Stan Models
 
 Edit `inst/stan/simple.stan` or `inst/stan/complex.stan`. A normal source-package
 installation runs `configure` (`configure.win` on Windows), which regenerates the

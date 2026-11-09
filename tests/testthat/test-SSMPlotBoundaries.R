@@ -1,9 +1,9 @@
-.ssm_plot_boundary_data <- function(lots = 1L) {
+.ssmPlotBoundaryData <- function(lots = 1L) {
   data.frame(count = rep(2, lots), n = rep(20, lots), s = rep(100, lots),
              lot = seq_len(lots), x1 = seq_len(lots), x2 = seq_len(lots)^2)
 }
 
-.ssm_plot_boundary_run <- function(data, theta, beta = NULL, y_pred = NULL,
+.ssmPlotBoundaryRun <- function(data, theta, beta = NULL, predictedDefects = NULL,
                                    predictors = character(), plots = character()) {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(defectCount = "count", sampleSize = "n", lotSize = "s",
@@ -11,10 +11,10 @@
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "plotPredictorCoefficient", "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- name %in% plots
-  if (is.null(y_pred)) y_pred <- rep(tail(data$count, 1L), nrow(theta))
+  if (is.null(predictedDefects)) predictedDefects <- rep(tail(data$count, 1L), nrow(theta))
   ns <- asNamespace("jaspAcceptanceSampling")
   fixture <- function(jaspResults, dataset, options) {
     error <- get(".asSSM_validateInputs", ns)(dataset, options)
@@ -23,11 +23,11 @@
       return()
     }
     state <- jaspBase::createJaspState()
-    state$dependOn(get(".asSSM_fitDependencies", ns)())
+    state$dependOn(get(".asSSM_getFitDependencies", ns)())
     jaspResults[["fit"]] <- state
     state$object <- list(
-      samples = list(theta = theta, beta_predictor = beta, y_pred = y_pred),
-      predictor_design = get(".asSSM_predictorDesign", ns)(dataset, options))
+      samples = list(theta = theta, beta_predictor = beta, y_pred = predictedDefects),
+      predictor_design = get(".asSSM_createPredictorDesign", ns)(dataset, options))
   }
   # The real runner and output builders are used; only sampling is replaced.
   testthat::local_mocked_bindings(
@@ -41,16 +41,16 @@
   jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE)
 }
 
-.ssm_plot_boundary_object <- function(result, name) {
+.ssmPlotBoundaryObject <- function(result, name) {
   result$state$figures[[result$results[[name]]$data]]$obj
 }
 
 test_that("a single lot shows its posterior mean and interval", {
   theta <- matrix(seq(.01, .20, length.out = 1000), ncol = 1L)
-  result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(), theta,
-                                  plots = "plotsStateTimeSeries")
+  result <- .ssmPlotBoundaryRun(.ssmPlotBoundaryData(), theta,
+                                  plots = "plotStateTimeSeries")
   expect_identical(result$status, "complete")
-  plot <- .ssm_plot_boundary_object(result, "ssm_statePlot")
+  plot <- .ssmPlotBoundaryObject(result, "ssm_statePlot")
   expect_s3_class(plot, "ggplot")
   expect_warning(ggplot2::ggplotGrob(plot), NA)
   built <- ggplot2::ggplot_build(plot)
@@ -70,9 +70,9 @@ test_that("several lots retain their trajectory and uncertainty ribbon", {
   theta <- cbind(seq(.01, .20, length.out = 1000),
                  seq(.10, .30, length.out = 1000),
                  seq(.20, .40, length.out = 1000))
-  result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(3L), theta,
-                                  plots = "plotsStateTimeSeries")
-  plot <- .ssm_plot_boundary_object(result, "ssm_statePlot")
+  result <- .ssmPlotBoundaryRun(.ssmPlotBoundaryData(3L), theta,
+                                  plots = "plotStateTimeSeries")
+  plot <- .ssmPlotBoundaryObject(result, "ssm_statePlot")
   expect_s3_class(plot$layers[[1L]]$geom, "GeomRibbon")
   expect_s3_class(plot$layers[[2L]]$geom, "GeomLine")
   expect_equal(plot$data$time, 1:3)
@@ -84,11 +84,11 @@ test_that("several lots retain their trajectory and uncertainty ribbon", {
 test_that("constant defect-rate draws retain state output but cannot manufacture a density", {
   for (value in c(0, .05, 1)) {
     theta <- matrix(rep(value, 1000), ncol = 1L)
-    result <- .ssm_plot_boundary_run(.ssm_plot_boundary_data(), theta,
-      plots = c("plotsStateTimeSeries", "plotsLatestDefectRate"))
+    result <- .ssmPlotBoundaryRun(.ssmPlotBoundaryData(), theta,
+      plots = c("plotStateTimeSeries", "plotLatestDefectRate"))
     expect_identical(result$status, "complete")
     expect_identical(result$results$summaryTable$status, "complete")
-    state <- .ssm_plot_boundary_object(result, "ssm_statePlot")
+    state <- .ssmPlotBoundaryObject(result, "ssm_statePlot")
     expect_equal(state$data$mean, value * 100)
     expect_equal(state$data$lower, state$data$upper)
     expect_warning(ggplot2::ggplotGrob(state), NA)
@@ -104,15 +104,15 @@ test_that("predictive plots preserve unit mass at zero and after full inspection
   cases <- list(c(y = 0, n = 0, s = 100), c(y = 7, n = 100, s = 100),
                 c(y = 0, n = 0, s = 0))
   for (counts in cases) {
-    data <- .ssm_plot_boundary_data()
+    data <- .ssmPlotBoundaryData()
     data$count <- counts[["y"]]
     data$n <- counts[["n"]]
     data$s <- counts[["s"]]
-    result <- .ssm_plot_boundary_run(data, matrix(seq(.01, .20, length.out = 1000), ncol = 1L),
-      y_pred = rep(counts[["y"]], 1000), plots = "plotsPosteriorPredictive")
+    result <- .ssmPlotBoundaryRun(data, matrix(seq(.01, .20, length.out = 1000), ncol = 1L),
+      predictedDefects = rep(counts[["y"]], 1000), plots = "plotPosteriorPredictive")
     expect_identical(result$status, "complete")
     expect_equal(result$results$summaryTable$data[[1L]]$pred, counts[["y"]])
-    plot <- .ssm_plot_boundary_object(result, "predPlot")
+    plot <- .ssmPlotBoundaryObject(result, "predPlot")
     expect_s3_class(plot, "ggplot")
     expect_equal(sum(plot$data$prob), 1)
     expect_true(all(is.finite(plot$data$x) & is.finite(plot$data$prob)))
@@ -122,15 +122,15 @@ test_that("predictive plots preserve unit mass at zero and after full inspection
 })
 
 test_that("malformed coefficient arrays fail instead of being reshaped into densities", {
-  data <- .ssm_plot_boundary_data(4L)
+  data <- .ssmPlotBoundaryData(4L)
   theta <- matrix(rep(.05, 4000), ncol = 4L)
   invalid <- list(matrix(1:6, ncol = 1L), matrix(1:12, ncol = 3L), 1:12,
                   matrix(letters[1:8], ncol = 2L), matrix(complex(real = 1:8), ncol = 2L),
                   matrix(numeric(), ncol = 2L), matrix(c(1, 2), nrow = 1L),
                   matrix(c(1, NA, 3, 4), ncol = 2L), matrix(c(1, Inf, 3, 4), ncol = 2L))
   for (beta in invalid) {
-    result <- .ssm_plot_boundary_run(data, theta, beta = beta,
-      predictors = c("x1", "x2"), plots = "plotsPredictorCoefficients")
+    result <- .ssmPlotBoundaryRun(data, theta, beta = beta,
+      predictors = c("x1", "x2"), plots = "plotPredictorCoefficient")
     expect_identical(result$status, "complete")
     expect_identical(result$results$betaPlot$status, "error")
     expect_match(paste(unlist(result$results$betaPlot), collapse = " "),
@@ -139,12 +139,12 @@ test_that("malformed coefficient arrays fail instead of being reshaped into dens
 })
 
 test_that("constant coefficient draws retain their summary but cannot manufacture density spread", {
-  data <- .ssm_plot_boundary_data(4L)
+  data <- .ssmPlotBoundaryData(4L)
   theta <- matrix(rep(.05, 4000), ncol = 4L)
   for (value in c(0, .5, -.5)) {
     beta <- cbind(seq(-.2, .2, length.out = 1000), rep(value, 1000))
-    result <- .ssm_plot_boundary_run(data, theta, beta = beta,
-      predictors = c("x1", "x2"), plots = "plotsPredictorCoefficients")
+    result <- .ssmPlotBoundaryRun(data, theta, beta = beta,
+      predictors = c("x1", "x2"), plots = "plotPredictorCoefficient")
     expect_identical(result$status, "complete")
     expect_identical(result$results$predictorSummary$status, "complete")
     expect_equal(result$results$predictorSummary$data[[2L]]$mean, value)

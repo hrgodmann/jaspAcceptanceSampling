@@ -22,14 +22,14 @@ test_that("impartial calibration covers both orientations and six-decimal bounda
   rqls <- locations + 1 + (i * 3571) %% (499999 - locations)
   peak <- data.frame(m = locations / 1e6, r = rqls / 1e6, shape = "unimodal")
   minimum <- data.frame(m = (1 + (i * 7919) %% 499999) / 1e6,
-                        r = (500001 + (i * 3571) %% 499999) / 1e6, shape = "u_shaped")
+                        r = (500001 + (i * 3571) %% 499999) / 1e6, shape = "uShaped")
   edgeLocations <- c(1, 2, 10, 1000, 50000, 490000, 499000, 499998) / 1e6
   peakEdges <- unique(rbind(data.frame(m = edgeLocations, r = edgeLocations + 1e-6),
                             data.frame(m = edgeLocations, r = .499999)))
   peakEdges$shape <- "unimodal"
   minimumEdges <- expand.grid(m = c(edgeLocations, .499999),
                               r = c(.500001, .9, .999999))
-  minimumEdges$shape <- "u_shaped"
+  minimumEdges$shape <- "uShaped"
   left <- rbind(peak, minimum, peakEdges, minimumEdges)
   cases <- rbind(left, transform(left, m = 1 - m, r = 1 - r))
   parameters <- t(vapply(seq_len(nrow(cases)), function(i) {
@@ -47,7 +47,7 @@ test_that("impartial calibration covers both orientations and six-decimal bounda
 })
 
 test_that("non-unique, incompatible and uniform-boundary prior requests are rejected", {
-  for (shape in c("unimodal", "u_shaped")) {
+  for (shape in c("unimodal", "uShaped")) {
     expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(.5, .5, shape),
                   "do not determine a unique.*Custom")
     for (m in c(.05, .95))
@@ -59,7 +59,7 @@ test_that("non-unique, incompatible and uniform-boundary prior requests are reje
     expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(pair[1], pair[2], "unimodal"),
                   "RQL must lie strictly between the mode and 0.5")
   for (pair in list(c(.05, .15), c(.95, .85)))
-    expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(pair[1], pair[2], "u_shaped"),
+    expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(pair[1], pair[2], "uShaped"),
                   "minimum and RQL must lie on opposite sides of 0.5")
 })
 
@@ -69,11 +69,11 @@ test_that("numerically unresolved near-uniform requests give explicit Custom gui
   expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(
     .05, .5 - .Machine$double.eps / 4, "unimodal"), "Could not reliably calibrate.*Custom")
   expect_error(jaspAcceptanceSampling:::.bsSolveImpartial(
-    .05, .5 + .Machine$double.eps / 2, "u_shaped"), "Could not reliably calibrate.*Custom")
+    .05, .5 + .Machine$double.eps / 2, "uShaped"), "Could not reliably calibrate.*Custom")
 })
 
 test_that("the impartial shape selector does not restrict a Custom U-shaped prior", {
-  actual <- jaspAcceptanceSampling:::.bsCalculatePriorParams(
+  actual <- jaspAcceptanceSampling:::.bsCalculatePriorParameters(
     prior = "custom", aql = .05, rql = .15, alpha = .2, beta = .4,
     impartialShape = "unimodal"
   )
@@ -81,9 +81,9 @@ test_that("the impartial shape selector does not restrict a Custom U-shaped prio
 })
 
 test_that("a Custom minimum may lie above the RQL for an impartial U-shaped prior", {
-  actual <- jaspAcceptanceSampling:::.bsCalculatePriorParams(
+  actual <- jaspAcceptanceSampling:::.bsCalculatePriorParameters(
     prior = "impartial", aql = .05, rql = .1,
-    impartialCustomMode = TRUE, impartialMode = .95, impartialShape = "u_shaped"
+    impartialCustomLocation = TRUE, impartialLocation = .95, impartialShape = "uShaped"
   )
   expect_equal(actual, list(alpha = .294771218818453057, beta = .962882695727286968),
                tolerance = 1e-10)

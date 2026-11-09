@@ -1,3 +1,36 @@
+# Independent PMF sums guard the intended finite-lot/Poisson test inputs.
+# These checks use the module's established AOQ/ATI rectification formulas;
+# they are not a new claim about exact finite-population AOQ modeling.
+.asExpectRectificationCurve <- function(plot, lotSize, sampleSize, acceptanceNumber,
+                                        proportionFrom, proportionTo, proportionStep,
+                                        distribution, curve) {
+  proportion <- seq(proportionFrom, proportionTo, by = proportionStep)
+  acceptanceProbability <- vapply(proportion, function(p) {
+    counts <- 0:acceptanceNumber
+    if (distribution == "hypergeometric") {
+      defects <- round(lotSize * p)
+      expect_lt(abs(defects - lotSize * p), 1e-8)
+      valid <- counts <= defects & sampleSize - counts <= lotSize - defects &
+        counts <= sampleSize
+      counts <- counts[valid]
+      sum(exp(lchoose(defects, counts) + lchoose(lotSize - defects, sampleSize - counts) -
+                lchoose(lotSize, sampleSize)))
+    } else {
+      rate <- sampleSize * p
+      if (rate == 0) return(1)
+      sum(exp(-rate + counts * log(rate) - lgamma(counts + 1)))
+    }
+  }, numeric(1))
+  expectedCurve <- if (curve == "AOQ")
+    acceptanceProbability * proportion * (lotSize - sampleSize) / lotSize else
+    acceptanceProbability * sampleSize + (1 - acceptanceProbability) * lotSize
+
+  expect_identical(plot$data$PD, round(proportion, 3))
+  expect_length(plot$data$PA, length(acceptanceProbability))
+  expect_lt(max(abs(plot$data$PA - acceptanceProbability)), 1e-10)
+  expect_equal(plot$data[[curve]], round(expectedCurve, 3), tolerance = 1e-12)
+}
+
 # Tests for Analyze Attribute Plan
 
 #################################################################
@@ -9,25 +42,25 @@
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan single - plan table match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeSingle <- 500
-  options$sampleSizeSingle <- 250
-  options$acceptNumberSingle <- 10
-  options$rejectNumberSingle <- 11
-  options$pd_lowerSingle <- 0
-  options$pd_upperSingle <- 1
-  options$pd_stepSingle <- 0.05
-  options$distributionSingle <- "binom"
+  options$singlePlanLotSize <- 500
+  options$singlePlanSampleSize <- 250
+  options$singlePlanAcceptanceNumber <- 10
+  options$singlePlanRejectionNumber <- 11
+  options$singlePlanProportionNonconformingFrom <- 0
+  options$singlePlanProportionNonconformingTo <- 1
+  options$singlePlanProportionNonconformingStep <- 0.05
+  options$singlePlanDistribution <- "binomial"
   
-  options$assessPlanSingle <- FALSE
-  options$showSummarySingle <- FALSE
-  options$showOCCurveSingle <- FALSE
-  options$showAOQCurveSingle <- FALSE
-  options$showATICurveSingle <- FALSE
-  options$showASNCurveSingle <- FALSE
+  options$singlePlanAssessment <- FALSE
+  options$singlePlanSummaryTable <- FALSE
+  options$singlePlanOperatingCharacteristicCurve <- FALSE
+  options$singlePlanAverageOutgoingQualityCurve <- FALSE
+  options$singlePlanAverageTotalInspectionCurve <- FALSE
+  options$singlePlanAverageSampleNumberCurve <- FALSE
   
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plan_table <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_plan_table"]][["data"]]
-  jaspTools::expect_equal_tables(plan_table, list("Sample size", 250, "Acceptance number", 10))
+  jaspTools::expect_equal_tables(plan_table, list("Sample Size", 250, "Acceptance Number", 10))
 })
 #################################################################################################################
 
@@ -36,25 +69,25 @@ test_that("Analyze attribute plan single - plan table match", {
 ##---------------------------------------------------------------
 test_that("Analyze attribute plan single - assess table match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeSingle <- 100
-  options$sampleSizeSingle <- 50
-  options$acceptNumberSingle <- 2
-  options$rejectNumberSingle <- 3
-  options$pd_lowerSingle <- 0
-  options$pd_upperSingle <- 1
-  options$pd_stepSingle <- 0.5
-  options$distributionSingle <- "hypergeom"
+  options$singlePlanLotSize <- 100
+  options$singlePlanSampleSize <- 50
+  options$singlePlanAcceptanceNumber <- 2
+  options$singlePlanRejectionNumber <- 3
+  options$singlePlanProportionNonconformingFrom <- 0
+  options$singlePlanProportionNonconformingTo <- 1
+  options$singlePlanProportionNonconformingStep <- 0.5
+  options$singlePlanDistribution <- "hypergeometric"
   
-  options$assessPlanSingle <- TRUE
-  options$aqlSingle <- 0.05
-  options$rqlSingle <- 0.15
-  options$prod_riskSingle <- 0.05
-  options$cons_riskSingle <- 0.1
-  options$showSummarySingle <- FALSE
-  options$showOCCurveSingle <- FALSE
-  options$showAOQCurveSingle <- FALSE
-  options$showATICurveSingle <- FALSE
-  options$showASNCurveSingle <- FALSE
+  options$singlePlanAssessment <- TRUE
+  options$singlePlanAssessmentAcceptableQualityLevel <- 0.05
+  options$singlePlanAssessmentRejectableQualityLevel <- 0.15
+  options$singlePlanAssessmentProducerRisk <- 0.05
+  options$singlePlanAssessmentConsumerRisk <- 0.1
+  options$singlePlanSummaryTable <- FALSE
+  options$singlePlanOperatingCharacteristicCurve <- FALSE
+  options$singlePlanAverageOutgoingQualityCurve <- FALSE
+  options$singlePlanAverageTotalInspectionCurve <- FALSE
+  options$singlePlanAverageSampleNumberCurve <- FALSE
   
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   assessTableTitle <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_riskTable"]][["title"]]
@@ -70,46 +103,52 @@ test_that("Analyze attribute plan single - assess table match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan single - AOQ Curve match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeSingle <- 2000
-  options$sampleSizeSingle <- 200
-  options$acceptNumberSingle <- 10
-  options$rejectNumberSingle <- 11
-  options$pd_lowerSingle <- 0.05
-  options$pd_upperSingle <- 0.25
-  options$pd_stepSingle <- 0.01
+  options$singlePlanLotSize <- 2000
+  options$singlePlanSampleSize <- 200
+  options$singlePlanAcceptanceNumber <- 10
+  options$singlePlanRejectionNumber <- 11
+  options$singlePlanProportionNonconformingFrom <- 0.05
+  options$singlePlanProportionNonconformingTo <- 0.25
+  options$singlePlanProportionNonconformingStep <- 0.01
   
-  options$showAOQCurveSingle <- TRUE
-  options$assessPlanSingle <- FALSE
-  options$showSummarySingle <- FALSE
-  options$showOCCurveSingle <- FALSE
-  options$showATICurveSingle <- FALSE
-  options$showASNCurveSingle <- FALSE
+  options$singlePlanAverageOutgoingQualityCurve <- TRUE
+  options$singlePlanAssessment <- FALSE
+  options$singlePlanSummaryTable <- FALSE
+  options$singlePlanOperatingCharacteristicCurve <- FALSE
+  options$singlePlanAverageTotalInspectionCurve <- FALSE
+  options$singlePlanAverageSampleNumberCurve <- FALSE
   
   # 1.3.1 Binomial
-  options$distributionSingle <- "binom"
+  options$singlePlanDistribution <- "binomial"
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_aoqCurve"]][["data"]]
   aoqPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(aoqPlotBinom, "aoq-curve-single-binom")
   
   # 1.3.2 Hypergeometric
-  options$distributionSingle <- "hypergeom"
-  options$lotSize <- 1000
-  options$sampleSizeSingle <- 100
-  options$pd_step <- 0.05
+  options$singlePlanDistribution <- "hypergeometric"
+  options$singlePlanLotSize <- 1000
+  options$singlePlanSampleSize <- 100
+  options$singlePlanProportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_aoqCurve"]][["data"]]
   aoqPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
+  .asExpectRectificationCurve(aoqPlotHypergeom, lotSize = 1000, sampleSize = 100,
+    acceptanceNumber = 10, proportionFrom = .05, proportionTo = .25, proportionStep = .05,
+    distribution = "hypergeometric", curve = "AOQ")
   jaspTools::expect_equal_plots(aoqPlotHypergeom, "aoq-curve-single-hypergeom")
 
   # 1.3.3 Poisson
-  options$distributionSingle <- "poisson"
-  options$lotSize <-  500 
-  options$sampleSizeSingle <- 50
-  options$pd_step <- 0.1
+  options$singlePlanDistribution <- "poisson"
+  options$singlePlanLotSize <-  500
+  options$singlePlanSampleSize <- 50
+  options$singlePlanProportionNonconformingStep <- 0.1
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_aoqCurve"]][["data"]]
   aoqPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
+  .asExpectRectificationCurve(aoqPlotPoisson, lotSize = 500, sampleSize = 50,
+    acceptanceNumber = 10, proportionFrom = .05, proportionTo = .25, proportionStep = .1,
+    distribution = "poisson", curve = "AOQ")
   jaspTools::expect_equal_plots(aoqPlotPoisson, "aoq-curve-single-poisson")
 })
 
@@ -118,46 +157,52 @@ test_that("Analyze attribute plan single - AOQ Curve match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan single - ATI Curve match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeSingle <- 400
-  options$sampleSizeSingle <- 80
-  options$acceptNumberSingle <- 4
-  options$rejectNumberSingle <- 5
-  options$pd_lowerSingle <- 0.10
-  options$pd_upperSingle <- 0.35
-  options$pd_stepSingle <- 0.02
+  options$singlePlanLotSize <- 400
+  options$singlePlanSampleSize <- 80
+  options$singlePlanAcceptanceNumber <- 4
+  options$singlePlanRejectionNumber <- 5
+  options$singlePlanProportionNonconformingFrom <- 0.10
+  options$singlePlanProportionNonconformingTo <- 0.35
+  options$singlePlanProportionNonconformingStep <- 0.02
   
-  options$showATICurveSingle <- TRUE
-  options$assessPlanSingle <- FALSE
-  options$showSummarySingle <- FALSE
-  options$showOCCurveSingle <- FALSE
-  options$showAOQCurveSingle <- FALSE
-  options$showASNCurveSingle <- FALSE
+  options$singlePlanAverageTotalInspectionCurve <- TRUE
+  options$singlePlanAssessment <- FALSE
+  options$singlePlanSummaryTable <- FALSE
+  options$singlePlanOperatingCharacteristicCurve <- FALSE
+  options$singlePlanAverageOutgoingQualityCurve <- FALSE
+  options$singlePlanAverageSampleNumberCurve <- FALSE
   
   # 1.4.1 Binomial
-  options$distributionSingle <- "binom"
+  options$singlePlanDistribution <- "binomial"
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_atiCurve"]][["data"]]
   atiPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(atiPlotBinom, "ati-curve-single-binom")
   
   # 1.4.2 Hypergeometric
-  options$distributionSingle <- "hypergeom"
-  options$lotSize <- 600
-  options$sampleSizeSingle <- 70
-  options$pd_step <- 0.03
+  options$singlePlanDistribution <- "hypergeometric"
+  options$singlePlanLotSize <- 600
+  options$singlePlanSampleSize <- 70
+  options$singlePlanProportionNonconformingStep <- 0.03
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_atiCurve"]][["data"]]
   atiPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
+  .asExpectRectificationCurve(atiPlotHypergeom, lotSize = 600, sampleSize = 70,
+    acceptanceNumber = 4, proportionFrom = .1, proportionTo = .35, proportionStep = .03,
+    distribution = "hypergeometric", curve = "ATI")
   jaspTools::expect_equal_plots(atiPlotHypergeom, "ati-curve-single-hypergeom")
 
   # 1.4.3 Poisson
-  options$distributionSingle <- "poisson"
-  options$lotSize <- 100
-  options$sampleSizeSingle <- 20
-  options$pd_step <- 0.005
+  options$singlePlanDistribution <- "poisson"
+  options$singlePlanLotSize <- 100
+  options$singlePlanSampleSize <- 20
+  options$singlePlanProportionNonconformingStep <- 0.005
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["singleContainer"]][["collection"]][["singleContainer_atiCurve"]][["data"]]
   atiPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
+  .asExpectRectificationCurve(atiPlotPoisson, lotSize = 100, sampleSize = 20,
+    acceptanceNumber = 4, proportionFrom = .1, proportionTo = .35, proportionStep = .005,
+    distribution = "poisson", curve = "ATI")
   jaspTools::expect_equal_plots(atiPlotPoisson, "ati-curve-single-poisson")
 })
 
@@ -170,27 +215,27 @@ test_that("Analyze attribute plan single - ATI Curve match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan multiple - plan table match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeMult <- 1000
-  options$numberOfStages <- 2
+  options$multiplePlanLotSize <- 1000
+  options$multiplePlanStagesCount <- 2
   n <- c(30,30)
   c <- c(0,3)
   r <- c(2,4)
   stages <- list()
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
-  options$pd_lowerMult <- 0
-  options$pd_upperMult <- 1
-  options$pd_stepMult <- 0.05
-  options$distributionMult <- "binom"
+  options$multiplePlanStages <- stages
+  options$multiplePlanProportionNonconformingFrom <- 0
+  options$multiplePlanProportionNonconformingTo <- 1
+  options$multiplePlanProportionNonconformingStep <- 0.05
+  options$multiplePlanDistribution <- "binomial"
   
-  options$assessPlanMult <- FALSE
-  options$showSummaryMult <- FALSE
-  options$showOCCurveMult <- FALSE
-  options$showAOQCurveMult <- FALSE
-  options$showATICurveMult <- FALSE
-  options$showASNCurveMult <- FALSE
+  options$multiplePlanAssessment <- FALSE
+  options$multiplePlanSummaryTable <- FALSE
+  options$multiplePlanOperatingCharacteristicCurve <- FALSE
+  options$multiplePlanAverageOutgoingQualityCurve <- FALSE
+  options$multiplePlanAverageTotalInspectionCurve <- FALSE
+  options$multiplePlanAverageSampleNumberCurve <- FALSE
   
   # 2.1.1 Default table with 2 stages:
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
@@ -198,14 +243,14 @@ test_that("Analyze attribute plan multiple - plan table match", {
   jaspTools::expect_equal_tables(plan_table, list(1, 30, 30, 0, 2, 2, 30, 60, 3, 4))
   
   # 2.1.2 Table with 6 stages:
-  options$numberOfStages <- 6
+  options$multiplePlanStagesCount <- 6
   n <- c(46,46,46,46,46,46)
   c <- c(0,1,2,3,4,6)
   r <- c(3,3,4,5,6,7)
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
+  options$multiplePlanStages <- stages
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plan_table <- results[["results"]][["multContainer"]][["collection"]][["multContainer_plan_table"]][["data"]]
   jaspTools::expect_equal_tables(plan_table, list(1, 46, 46, 0, 3, 2, 46, 92, 1, 3, 3, 46, 138, 2, 4, 4, 46, 184, 
@@ -217,32 +262,32 @@ test_that("Analyze attribute plan multiple - plan table match", {
 ##---------------------------------------------------------------
 test_that("Analyze attribute plan Mult - assess table match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeMult <- 800
-  options$numberOfStages <- 6
+  options$multiplePlanLotSize <- 800
+  options$multiplePlanStagesCount <- 6
   n <- c(46,46,46,46,46,46)
   c <- c(0,1,2,3,4,6)
   r <- c(3,3,4,5,6,7)
   stages <- list()
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
-  options$pd_lowerMult <- 0
-  options$pd_upperMult <- 0.75
-  options$pd_stepMult <- 0.02
-  options$distributionMult <- "binom"
+  options$multiplePlanStages <- stages
+  options$multiplePlanProportionNonconformingFrom <- 0
+  options$multiplePlanProportionNonconformingTo <- 0.75
+  options$multiplePlanProportionNonconformingStep <- 0.02
+  options$multiplePlanDistribution <- "binomial"
   
-  options$showSummaryMult <- FALSE
-  options$showOCCurveMult <- FALSE
-  options$showAOQCurveMult <- FALSE
-  options$showATICurveMult <- FALSE
-  options$showASNCurveMult <- FALSE
+  options$multiplePlanSummaryTable <- FALSE
+  options$multiplePlanOperatingCharacteristicCurve <- FALSE
+  options$multiplePlanAverageOutgoingQualityCurve <- FALSE
+  options$multiplePlanAverageTotalInspectionCurve <- FALSE
+  options$multiplePlanAverageSampleNumberCurve <- FALSE
   
-  options$assessPlanMult <- TRUE
-  options$aqlMult <- 0.05
-  options$rqlMult <- 0.15
-  options$prod_riskMult <- 0.05
-  options$cons_riskMult <- 0.1
+  options$multiplePlanAssessment <- TRUE
+  options$multiplePlanAssessmentAcceptableQualityLevel <- 0.05
+  options$multiplePlanAssessmentRejectableQualityLevel <- 0.15
+  options$multiplePlanAssessmentProducerRisk <- 0.05
+  options$multiplePlanAssessmentConsumerRisk <- 0.1
   
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   assessTableTitle <- results[["results"]][["multContainer"]][["collection"]][["multContainer_riskTable"]][["title"]]
@@ -258,48 +303,48 @@ test_that("Analyze attribute plan Mult - assess table match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan Mult - AOQ Curve match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeMult <- 400
-  options$numberOfStages <- 3
+  options$multiplePlanLotSize <- 400
+  options$multiplePlanStagesCount <- 3
   n <- c(35,45,55)
   c <- c(0,3,6)
   r <- c(2,5,7)
   stages <- list()
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
-  options$pd_lowerMult <- 0.08
-  options$pd_upperMult <- 0.95
-  options$pd_stepMult <- 0.04
+  options$multiplePlanStages <- stages
+  options$multiplePlanProportionNonconformingFrom <- 0.08
+  options$multiplePlanProportionNonconformingTo <- 0.95
+  options$multiplePlanProportionNonconformingStep <- 0.04
   
-  options$showAOQCurveMult <- TRUE
+  options$multiplePlanAverageOutgoingQualityCurve <- TRUE
 
-  options$assessPlanMult <- FALSE
-  options$showSummaryMult <- FALSE
-  options$showOCCurveMult <- FALSE
-  options$showATICurveMult <- FALSE
-  options$showASNCurveMult <- FALSE
+  options$multiplePlanAssessment <- FALSE
+  options$multiplePlanSummaryTable <- FALSE
+  options$multiplePlanOperatingCharacteristicCurve <- FALSE
+  options$multiplePlanAverageTotalInspectionCurve <- FALSE
+  options$multiplePlanAverageSampleNumberCurve <- FALSE
   
   # 2.3.1 Binomial
-  options$distributionMult <- "binom"
+  options$multiplePlanDistribution <- "binomial"
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_aoqCurve"]][["data"]]
   aoqPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(aoqPlotBinom, "aoq-curve-Mult-binom")
   
   # 2.3.2 Hypergeometric
-  options$distributionMult <- "hypergeom"
-  options$lotSizeMult <- 600
-  options$pd_stepMult <- 0.03
+  options$multiplePlanDistribution <- "hypergeometric"
+  options$multiplePlanLotSize <- 600
+  options$multiplePlanProportionNonconformingStep <- 0.03
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_aoqCurve"]][["data"]]
   aoqPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(aoqPlotHypergeom, "aoq-curve-Mult-hypergeom")
 
   # 2.3.3 Poisson
-  options$distributionMult <- "poisson"
-  options$lotSizeMult <- 800
-  options$pd_stepMult <- 0.1
+  options$multiplePlanDistribution <- "poisson"
+  options$multiplePlanLotSize <- 800
+  options$multiplePlanProportionNonconformingStep <- 0.1
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_aoqCurve"]][["data"]]
   aoqPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -311,48 +356,48 @@ test_that("Analyze attribute plan Mult - AOQ Curve match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan Mult - ATI Curve match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeMult <- 400
-  options$numberOfStages <- 4
+  options$multiplePlanLotSize <- 400
+  options$multiplePlanStagesCount <- 4
   n <- c(20,15,15,25)
   c <- c(0,3,6,9)
   r <- c(2,5,8,10)
   stages <- list()
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
-  options$pd_lowerMult <- 0.10
-  options$pd_upperMult <- 0.22
-  options$pd_stepMult <- 0.002
+  options$multiplePlanStages <- stages
+  options$multiplePlanProportionNonconformingFrom <- 0.10
+  options$multiplePlanProportionNonconformingTo <- 0.22
+  options$multiplePlanProportionNonconformingStep <- 0.002
   
-  options$showATICurveMult <- TRUE
+  options$multiplePlanAverageTotalInspectionCurve <- TRUE
 
-  options$assessPlanMult <- FALSE
-  options$showSummaryMult <- FALSE
-  options$showOCCurveMult <- FALSE
-  options$showAOQCurveMult <- FALSE
-  options$showASNCurveMult <- FALSE
+  options$multiplePlanAssessment <- FALSE
+  options$multiplePlanSummaryTable <- FALSE
+  options$multiplePlanOperatingCharacteristicCurve <- FALSE
+  options$multiplePlanAverageOutgoingQualityCurve <- FALSE
+  options$multiplePlanAverageSampleNumberCurve <- FALSE
   
   # 2.4.1 Binomial
-  options$distributionMult <- "binom"
+  options$multiplePlanDistribution <- "binomial"
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_atiCurve"]][["data"]]
   atiPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(atiPlotBinom, "ati-curve-Mult-binom")
   
   # 2.4.2 Hypergeometric
-  options$distributionMult <- "hypergeom"
-  options$lotSizeMult <- 300
-  options$pd_stepMult <- 0.01
+  options$multiplePlanDistribution <- "hypergeometric"
+  options$multiplePlanLotSize <- 300
+  options$multiplePlanProportionNonconformingStep <- 0.01
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_atiCurve"]][["data"]]
   atiPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(atiPlotHypergeom, "ati-curve-Mult-hypergeom")
 
   # 2.4.3 Poisson
-  options$distributionMult <- "poisson"
-  options$lotSizeMult <- 200
-  options$pd_stepMult <- 0.02
+  options$multiplePlanDistribution <- "poisson"
+  options$multiplePlanLotSize <- 200
+  options$multiplePlanProportionNonconformingStep <- 0.02
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_atiCurve"]][["data"]]
   atiPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -364,48 +409,48 @@ test_that("Analyze attribute plan Mult - ATI Curve match", {
 ##----------------------------------------------------------------
 test_that("Analyze attribute plan Mult - ASN Curve match", {
   options <- jaspTools::analysisOptions("AnalyzeAttributePlan")
-  options$lotSizeMult <- 500
-  options$numberOfStages <- 7
+  options$multiplePlanLotSize <- 500
+  options$multiplePlanStagesCount <- 7
   n <- c(10,12,12,15,15,20,50)
   c <- c(0,3,6,9,12,15,18)
   r <- c(2,5,8,11,14,17,19)
   stages <- list()
-  for (i in 1:options$numberOfStages) {
-    stages[[i]] <- list(acceptNumberMult=c[i], rejectNumberMult=r[i], sampleSizeMult=n[i], value=as.character(i))
+  for (i in 1:options$multiplePlanStagesCount) {
+    stages[[i]] <- list(acceptanceNumber=c[i], rejectionNumber=r[i], sampleSize=n[i], value=as.character(i))
   }
-  options$stages <- stages
-  options$pd_lowerMult <- 0.005
-  options$pd_upperMult <- 0.355
-  options$pd_stepMult <- 0.01
+  options$multiplePlanStages <- stages
+  options$multiplePlanProportionNonconformingFrom <- 0.005
+  options$multiplePlanProportionNonconformingTo <- 0.355
+  options$multiplePlanProportionNonconformingStep <- 0.01
   
-  options$showASNCurveMult <- TRUE
+  options$multiplePlanAverageSampleNumberCurve <- TRUE
   
-  options$assessPlanMult <- FALSE
-  options$showSummaryMult <- FALSE
-  options$showOCCurveMult <- FALSE
-  options$showAOQCurveMult <- FALSE
-  options$showATICurveMult <- FALSE
+  options$multiplePlanAssessment <- FALSE
+  options$multiplePlanSummaryTable <- FALSE
+  options$multiplePlanOperatingCharacteristicCurve <- FALSE
+  options$multiplePlanAverageOutgoingQualityCurve <- FALSE
+  options$multiplePlanAverageTotalInspectionCurve <- FALSE
   
   # 2.5.1 Binomial
-  options$distributionMult <- "binom"
+  options$multiplePlanDistribution <- "binomial"
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_asnCurve"]][["data"]]
   asnPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(asnPlotBinom, "asn-curve-Mult-binom")
   
   # 2.5.2 Hypergeometric
-  options$distributionMult <- "hypergeom"
-  options$lotSizeMult <- 600
-  options$pd_stepMult <- 0.05
+  options$multiplePlanDistribution <- "hypergeometric"
+  options$multiplePlanLotSize <- 600
+  options$multiplePlanProportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_asnCurve"]][["data"]]
   asnPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(asnPlotHypergeom, "asn-curve-Mult-hypergeom")
 
   # 2.5.3 Poisson
-  options$distributionMult <- "poisson"
-  options$lotSizeMult <- 2000
-  options$pd_stepMult <- 0.06
+  options$multiplePlanDistribution <- "poisson"
+  options$multiplePlanLotSize <- 2000
+  options$multiplePlanProportionNonconformingStep <- 0.06
   results <- jaspTools::runAnalysis("AnalyzeAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["multContainer"]][["collection"]][["multContainer_asnCurve"]][["data"]]
   asnPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]

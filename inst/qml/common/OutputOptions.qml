@@ -22,11 +22,11 @@ import "./" as Common
 
 Group
 {
-	title: qsTr("Output options")
-	property string output_suffix: ""
-	CheckBox { name: "showSummary" + output_suffix; label: qsTr("Summary table") }
-	CheckBox { name: "showOCCurve" + output_suffix; label: qsTr("OC curve") }
-	CheckBox { name: "showAOQCurve" + output_suffix; label: qsTr("AOQ curve (plan with rectification)") }
-	CheckBox { name: "showATICurve" + output_suffix; label: qsTr("ATI curve (plan with rectification)") }
-	CheckBox { name: "showASNCurve" + output_suffix; label: qsTr("ASN curve"); enabled: output_suffix === "Mult" ? true : false; visible: output_suffix === "Mult" ? true : false }
+	title: qsTr("Output Options")
+	property string prefix: ""
+	CheckBox { name: (prefix === "" ? "summaryTable" : prefix + "SummaryTable"); label: qsTr("Summary table") }
+	CheckBox { name: (prefix === "" ? "operatingCharacteristicCurve" : prefix + "OperatingCharacteristicCurve"); label: qsTr("OC curve") }
+	CheckBox { name: (prefix === "" ? "averageOutgoingQualityCurve" : prefix + "AverageOutgoingQualityCurve"); label: qsTr("AOQ curve (plan with rectification)") }
+	CheckBox { name: (prefix === "" ? "averageTotalInspectionCurve" : prefix + "AverageTotalInspectionCurve"); label: qsTr("ATI curve (plan with rectification)") }
+	CheckBox { name: (prefix === "" ? "averageSampleNumberCurve" : prefix + "AverageSampleNumberCurve"); label: qsTr("ASN curve"); enabled: prefix === "multiplePlan" ? true : false; visible: prefix === "multiplePlan" ? true : false }
 }

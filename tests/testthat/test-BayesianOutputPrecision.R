@@ -1,10 +1,10 @@
 test_that("Bayesian predictive plots label a fully inspected non-round count", {
   options <- jaspTools::analysisOptions("BayesianSampling")
   options$planningPriorDistribution <- "uniform"
-  options$planningPlansTable <- FALSE
+  options$planningPlanTable <- FALSE
   options$planningPriorPlot <- FALSE
   options$planningThreeHypothesisBayesFactorTable <- FALSE
-  options$inferenceUseData <- TRUE
+  options$inferencePosterior <- TRUE
   options$inferenceDecisionTable <- FALSE
   options$inferencePosteriorPlot <- FALSE
   options$inferencePosteriorPredictivePlot <- TRUE
@@ -15,8 +15,8 @@ test_that("Bayesian predictive plots label a fully inspected non-round count", {
   results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                     options = options, view = FALSE, quiet = TRUE)
   expect_equal(results$status, "complete")
-  plot_name <- results$results$infContainer$collection$infContainer_ppdPlot$data
-  plot <- results$state$figures[[plot_name]]$obj
+  plotName <- results$results$infContainer$collection$infContainer_ppdPlot$data
+  plot <- results$state$figures[[plotName]]$obj
   expect_equal(plot$data$d_tot, 29)
   expect_equal(plot$data$pmf, 1)
   expect_warning(ggplot2::ggplotGrob(plot), NA)
@@ -29,7 +29,7 @@ test_that("Bayesian predictive plots label a fully inspected non-round count", {
 
 test_that("Bayesian predictive plots preserve their regular count axis", {
   # Preserve the existing axis for an ordinary non-degenerate support.
-  scale <- jaspAcceptanceSampling:::.bsPPDXScale(0:67)
+  scale <- jaspAcceptanceSampling:::.bsCreatePredictiveXAxisScale(0:67)
   expect_equal(scale$breaks, seq(0, 70, by = 10))
   expect_equal(scale$limits, c(-0.5, 67.5))
 })
@@ -49,10 +49,10 @@ test_that("Bayesian quality thresholds retain input precision in tables and text
     options$planningPriorDistribution <- "uniform"
     options$planningAcceptableQualityLevel <- case$aql
     options$planningRejectableQualityLevel <- case$rql
-    options$planningPlansTable <- FALSE
+    options$planningPlanTable <- FALSE
     options$planningPriorPlot <- FALSE
     options$planningThreeHypothesisBayesFactorTable <- FALSE
-    options$inferenceUseData <- TRUE
+    options$inferencePosterior <- TRUE
     options$inferenceDecisionTable <- TRUE
     options$inferencePosteriorPlot <- TRUE
     options$inferencePosteriorPredictivePlot <- FALSE
@@ -82,18 +82,18 @@ test_that("Bayesian quality thresholds retain input precision in tables and text
 
     # These presentation changes must retain the numerical results. With a
     # uniform prior and zero defectives among 30, the posterior is Beta(1,31).
-    expected_bf <- expm1(-31 * log1p(-case$rql)) * (1 - case$rql) / case$rql
-    expect_equal(values[match("Bayes Factor", labels)], sprintf("%.3f", expected_bf))
+    expectedBf <- expm1(-31 * log1p(-case$rql)) * (1 - case$rql) / case$rql
+    expect_equal(values[match("Bayes Factor", labels)], sprintf("%.3f", expectedBf))
 
     # Independent combinatorial form of the finite-lot posterior prediction:
     # P(D=k | d=0,n=30,N=100) = choose(100-k,30) / choose(101,31).
     totals <- 0:70
     pmf <- choose(100 - totals, 30) / choose(101, 31)
-    aql_count <- floor(case$aql * 100)
-    rql_count <- floor(case$rql * 100)
-    expected_ppd <- c(sum(pmf[totals <= aql_count]),
-                      sum(pmf[totals > aql_count & totals <= rql_count]),
-                      sum(pmf[totals > rql_count]))
-    expect_equal(values[startsWith(labels, "PPD ")], sprintf("%.3f", expected_ppd))
+    acceptableQualityCountLimit <- floor(case$aql * 100)
+    rejectableQualityCountLimit <- floor(case$rql * 100)
+    expectedPpd <- c(sum(pmf[totals <= acceptableQualityCountLimit]),
+                      sum(pmf[totals > acceptableQualityCountLimit & totals <= rejectableQualityCountLimit]),
+                      sum(pmf[totals > rejectableQualityCountLimit]))
+    expect_equal(values[startsWith(labels, "PPD ")], sprintf("%.3f", expectedPpd))
   }
 })

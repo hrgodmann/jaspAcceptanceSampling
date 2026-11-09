@@ -31,27 +31,27 @@ Form
 
 		Common.Distribution
 		{
-			suffix: "Single"
+			prefix: "singlePlan"
 		}
 
 		Group
 		{
-			CheckBox { name: "assessPlanSingle"; label: qsTr("Assess attribute plan"); id: assessSingle }
+			CheckBox { name: "singlePlanAssessment"; label: qsTr("Assess attribute plan"); id: assessSingle }
 			Common.RiskPoints
 			{
-				suffix: "Single"
+				prefix: "singlePlanAssessment"
 				enabled: assessSingle.checked
 			}
 		}
 
 		Common.ProbDefect
 		{
-			suffix: "Single"
+			prefix: "singlePlan"
 		}
 
 		Common.OutputOptions
 		{
-			output_suffix: "Single"
+			prefix: "singlePlan"
 		}
 	}
 
@@ -64,27 +64,27 @@ Form
 
 		Common.Distribution
 		{
-			suffix: "Mult"
+			prefix: "multiplePlan"
 		}
 
 		Group
 		{
-			CheckBox { name: "assessPlanMult"; label: qsTr("Assess sampling plan"); id: assessMult }
+			CheckBox { name: "multiplePlanAssessment"; label: qsTr("Assess sampling plan"); id: assessMult }
 			Common.RiskPoints
 			{
-				suffix: "Mult"
+				prefix: "multiplePlanAssessment"
 				enabled: assessMult.checked
 			}
 		}
 
 		Common.ProbDefect
 		{
-			suffix: "Mult"
+			prefix: "multiplePlan"
 		}
 		
 		Common.OutputOptions
 		{
-			output_suffix: "Mult"
+			prefix: "multiplePlan"
 		}
 	}
 }

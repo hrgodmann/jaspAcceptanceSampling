@@ -5,29 +5,29 @@
 ##--------------------------------------------------------------------
 test_that("Create plan - plan and probability tables match", {
   options <- jaspTools::analysisOptions("CreateAttributePlan")
-  options$aql <- 0.05
-  options$rql <- 0.15
-  options$prod_risk <- 0.05
-  options$cons_risk <- 0.1
-  options$pd_lower <- 0
-  options$pd_upper <- 0.15
-  options$pd_step <- 0.01
-  options$showSummary <- FALSE
+  options$acceptableQualityLevel <- 0.05
+  options$rejectableQualityLevel <- 0.15
+  options$producerRisk <- 0.05
+  options$consumerRisk <- 0.1
+  options$proportionNonconformingFrom <- 0
+  options$proportionNonconformingTo <- 0.15
+  options$proportionNonconformingStep <- 0.01
+  options$summaryTable <- FALSE
   
   # 1.1 Binomial
-  options$distribution <- "binom"
+  options$distribution <- "binomial"
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plan_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findPlanTable"]][["data"]]
-  jaspTools::expect_equal_tables(plan_table, list("Sample size", 77, "Acceptance number", 7))
+  jaspTools::expect_equal_tables(plan_table, list("Sample Size", 77, "Acceptance Number", 7))
   prob_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findProbTable"]][["data"]]
   jaspTools::expect_equal_tables(prob_table, list("AQL", 0.05, 0.9615, 0.0385, "RQL", 0.15, 0.0925, 0.9075))
   
   # 1.2 Hypergeometric
-  options$distribution <- "hypergeom"
+  options$distribution <- "hypergeometric"
   options$lotSize <- 1000
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plan_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findPlanTable"]][["data"]]
-  jaspTools::expect_equal_tables(plan_table, list("Sample size", 67, "Acceptance number", 6))
+  jaspTools::expect_equal_tables(plan_table, list("Sample Size", 67, "Acceptance Number", 6))
   prob_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findProbTable"]][["data"]]
   jaspTools::expect_equal_tables(prob_table, list("AQL", 0.05, 0.9564, 0.04364, "RQL", 0.15, 0.0994, 0.9006))
   
@@ -35,7 +35,7 @@ test_that("Create plan - plan and probability tables match", {
   options$distribution <- "poisson"
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plan_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findPlanTable"]][["data"]]
-  jaspTools::expect_equal_tables(plan_table, list("Sample size", 79, "Acceptance number", 7))
+  jaspTools::expect_equal_tables(plan_table, list("Sample Size", 79, "Acceptance Number", 7))
   prob_table <- results[["results"]][["createContainer"]][["collection"]][["createContainer_findProbTable"]][["data"]]
   jaspTools::expect_equal_tables(prob_table, list("AQL", 0.05, 0.9518, 0.0482, "RQL", 0.15, 0.0963, 0.9037))
 })
@@ -45,17 +45,17 @@ test_that("Create plan - plan and probability tables match", {
 ##---------------------------------------------------------------
 test_that("Create plan - summary table match", {
   options <- jaspTools::analysisOptions("CreateAttributePlan")
-  options$aql <- 0.02
-  options$rql <- 0.20
-  options$prod_risk <- 0.09
-  options$cons_risk <- 0.15
-  options$pd_lower <- 0.05
-  options$pd_upper <- 0.35
-  options$pd_step <- 0.01
-  options$showSummary <- TRUE
+  options$acceptableQualityLevel <- 0.02
+  options$rejectableQualityLevel <- 0.20
+  options$producerRisk <- 0.09
+  options$consumerRisk <- 0.15
+  options$proportionNonconformingFrom <- 0.05
+  options$proportionNonconformingTo <- 0.35
+  options$proportionNonconformingStep <- 0.01
+  options$summaryTable <- TRUE
   
   # 2.1 Binomial
-  options$distribution <- "binom"
+  options$distribution <- "binomial"
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   summaryTable <- results[["results"]][["createContainer"]][["collection"]][["createContainer_summaryTable"]][["data"]]
   jaspTools::expect_equal_tables(summaryTable, list(
@@ -65,7 +65,7 @@ test_that("Create plan - summary table match", {
     0.0314, 0.3, 0.0261, 0.31, 0.0216, 0.32, 0.0178, 0.33, 0.0146, 0.34, 0.012, 0.35, 0.0098))
   
   # 2.2 Hypergeometric
-  options$distribution <- "hypergeom"
+  options$distribution <- "hypergeometric"
   options$lotSize <- 800
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   summaryTable <- results[["results"]][["createContainer"]][["collection"]][["createContainer_summaryTable"]][["data"]]
@@ -77,7 +77,7 @@ test_that("Create plan - summary table match", {
 
   # 2.3 Poisson
   options$distribution <- "poisson"
-  options$pd_step <- 0.03
+  options$proportionNonconformingStep <- 0.03
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   summaryTable <- results[["results"]][["createContainer"]][["collection"]][["createContainer_summaryTable"]][["data"]]
   jaspTools::expect_equal_tables(summaryTable, list(
@@ -90,30 +90,30 @@ test_that("Create plan - summary table match", {
 ##----------------------------------------------------------------
 test_that("Create plan - OC Curve match", {
   options <- jaspTools::analysisOptions("CreateAttributePlan")
-  options$aql <- 0.05
-  options$rql <- 0.65
-  options$prod_risk <- 0.15
-  options$cons_risk <- 0.20
-  options$pd_lower <- 0.15
-  options$pd_upper <- 0.72
-  options$showOCCurve <- TRUE
+  options$acceptableQualityLevel <- 0.05
+  options$rejectableQualityLevel <- 0.65
+  options$producerRisk <- 0.15
+  options$consumerRisk <- 0.20
+  options$proportionNonconformingFrom <- 0.15
+  options$proportionNonconformingTo <- 0.72
+  options$operatingCharacteristicCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showAOQCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$summaryTable <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
 
   # 3.1 Binomial
-  options$distribution <- "binom" 
-  options$pd_step <- 0.02
+  options$distribution <- "binomial"
+  options$proportionNonconformingStep <- 0.02
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_ocCurve"]][["data"]]
   testPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(testPlotBinom, "oc-operating-characteristics-curve-binom")
   
   # 3.2 Hypergeometric
-  options$distribution <- "hypergeom"
+  options$distribution <- "hypergeometric"
   options$lotSize <- 2000
-  options$pd_step <- 0.001
+  options$proportionNonconformingStep <- 0.001
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_ocCurve"]][["data"]]
   testPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -121,7 +121,7 @@ test_that("Create plan - OC Curve match", {
 
   # 3.3 Poisson
   options$distribution <- "poisson"
-  options$pd_step <- 0.05
+  options$proportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_ocCurve"]][["data"]]
   testPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -133,32 +133,32 @@ test_that("Create plan - OC Curve match", {
 ##---------------------------------------------------------------
 test_that("Create attribute plan - AOQ Curve match", {
   options <- jaspTools::analysisOptions("CreateAttributePlan")
-  options$aql <- 0.20
-  options$rql <- 0.40
-  options$prod_risk <- 0.25
-  options$cons_risk <- 0.45
-  options$pd_lower <- 0.1
-  options$pd_upper <- 0.9
-  options$showAOQCurve <- TRUE
+  options$acceptableQualityLevel <- 0.20
+  options$rejectableQualityLevel <- 0.40
+  options$producerRisk <- 0.25
+  options$consumerRisk <- 0.45
+  options$proportionNonconformingFrom <- 0.1
+  options$proportionNonconformingTo <- 0.9
+  options$averageOutgoingQualityCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showOCCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$summaryTable <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
   
   # 4.1 Binomial
-  options$distribution <- "binom"
+  options$distribution <- "binomial"
   options$lotSize <- 1000
-  options$pd_step <- 0.1
+  options$proportionNonconformingStep <- 0.1
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_aoqCurve"]][["data"]]
   aoqPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(aoqPlotBinom, "aoq-curve--binom")
   
   # 4.2 Hypergeometric
-  options$distribution <- "hypergeom"
+  options$distribution <- "hypergeometric"
   options$lotSize <- 500
   options$sampleSize <- 100
-  options$pd_step <- 0.05
+  options$proportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_aoqCurve"]][["data"]]
   aoqPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -168,7 +168,7 @@ test_that("Create attribute plan - AOQ Curve match", {
   options$distribution <- "poisson"
   options$lotSize <- 400
   options$sampleSize <- 50
-  options$pd_step <- 0.01
+  options$proportionNonconformingStep <- 0.01
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_aoqCurve"]][["data"]]
   aoqPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -180,32 +180,32 @@ test_that("Create attribute plan - AOQ Curve match", {
 ##---------------------------------------------------------------
 test_that("Create attribute plan - ATI Curve match", {
   options <- jaspTools::analysisOptions("CreateAttributePlan")
-  options$aql <- 0.08
-  options$rql <- 0.65
-  options$prod_risk <- 0.18
-  options$cons_risk <- 0.38
-  options$pd_lower <- 0.04
-  options$pd_upper <- 0.78
+  options$acceptableQualityLevel <- 0.08
+  options$rejectableQualityLevel <- 0.65
+  options$producerRisk <- 0.18
+  options$consumerRisk <- 0.38
+  options$proportionNonconformingFrom <- 0.04
+  options$proportionNonconformingTo <- 0.78
   
-  options$showATICurve <- TRUE
+  options$averageTotalInspectionCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showOCCurve <- FALSE
-  options$showAOQCurve <- FALSE
+  options$summaryTable <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
   
   # 5.1 Binomial
-  options$distribution <- "binom"
+  options$distribution <- "binomial"
   options$lotSize <- 750
-  options$pd_step <- 0.2
+  options$proportionNonconformingStep <- 0.2
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_atiCurve"]][["data"]]
   atiPlotBinom <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(atiPlotBinom, "ati-curve--binom")
   
   # 5.2 Hypergeometric
-  options$distribution <- "hypergeom"
+  options$distribution <- "hypergeometric"
   options$lotSize <- 600
-  options$pd_step <- 0.1
+  options$proportionNonconformingStep <- 0.1
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_atiCurve"]][["data"]]
   atiPlotHypergeom <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -214,7 +214,7 @@ test_that("Create attribute plan - ATI Curve match", {
   # 5.3 Poisson
   options$distribution <- "poisson"
   options$lotSize <- 300
-  options$pd_step <- 0.05
+  options$proportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("CreateAttributePlan", "test.csv", options)
   plotName <- results[["results"]][["createContainer"]][["collection"]][["createContainer_atiCurve"]][["data"]]
   atiPlotPoisson <- results[["state"]][["figures"]][[plotName]][["obj"]]

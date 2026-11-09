@@ -4,10 +4,10 @@
   options$planningPriorDistribution <- "custom"
   options$planningPriorAlpha <- 1
   options$planningPriorBeta <- 1
-  options$planningPlansTable <- FALSE
+  options$planningPlanTable <- FALSE
   options$planningThreeHypothesisBayesFactorTable <- FALSE
   options$planningPriorPlot <- TRUE
-  options$inferenceUseData <- TRUE
+  options$inferencePosterior <- TRUE
   options$inferenceDecisionTable <- TRUE
   options$inferencePosteriorPlot <- TRUE
   options$inferencePosteriorPredictivePlot <- FALSE
@@ -53,7 +53,7 @@
 test_that("Bayesian sampling - adaptive grids retain finite endpoints, modes, and density mass", {
   cases <- list(c(1, 1), c(1, 1e6), c(1e6, 1), c(1e5, 1e5), c(9e10, 9e10))
   for (params in cases) {
-    grid <- jaspAcceptanceSampling:::.bsBetaDensityGrid(params[1L], params[2L])
+    grid <- jaspAcceptanceSampling:::.bsCreateBetaDensityGrid(params[1L], params[2L])
     expect_equal(range(grid$x), c(0, 1))
     expect_true(all(diff(grid$x) > 0))
     expect_equal(grid$density, dbeta(grid$x, params[1L], params[2L]))
@@ -90,12 +90,12 @@ test_that("Bayesian sampling - actual prior and posterior layers preserve distin
 
 test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved in the rendered plot", {
   options <- .bsDensityOptionsForTest()
-  options$planningPriorDistribution <- "impartial_three"
+  options$planningPriorDistribution <- "impartialThreeRegion"
   options$planningAcceptableQualityLevel <- .499999
   options$planningRejectableQualityLevel <- .5
-  options$planningPriorThreeRegionShapeConstraint <- "both_ge_1"
-  options$inferenceUseData <- FALSE
-  original <- get(".bsDistributionPlot", asNamespace("jaspAcceptanceSampling"))
+  options$planningPriorThreeRegionShapeConstraint <- "bothAtLeastOne"
+  options$inferencePosterior <- FALSE
+  original <- get(".bsCreateDistributionPlot", asNamespace("jaspAcceptanceSampling"))
   params <- NULL
   wrapper <- function(container, aql, rql, alpha, beta, type, ...) {
     params <<- c(alpha, beta)
@@ -103,7 +103,7 @@ test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved 
   }
   result <- testthat::with_mocked_bindings(
     jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
-    .bsDistributionPlot = wrapper, .package = "jaspAcceptanceSampling")
+    .bsCreateDistributionPlot = wrapper, .package = "jaspAcceptanceSampling")
   expect_identical(result$status, "complete")
   expect_true(all(params > 1e10))
   plot <- .bsDensityPlotForTest(result, "Prior")
@@ -116,7 +116,7 @@ test_that("Bayesian sampling - a reachable sharply calibrated prior is resolved 
 test_that("Bayesian sampling - actual U-shaped tails are mirrored and retained when expanding axes", {
   options <- .bsDensityOptionsForTest()
   options$planningPriorAlpha <- options$planningPriorBeta <- .5
-  options$inferenceUseData <- FALSE
+  options$inferencePosterior <- FALSE
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   plot <- .bsDensityPlotForTest(result, "Prior")
@@ -134,16 +134,16 @@ test_that("Bayesian sampling - actual U-shaped tails are mirrored and retained w
   expect_equal(sum(is.infinite(built$y)), 2L)
   expect_warning(ggplot2::ggplotGrob(plot), NA)
   # Use the installed scale's existing out-of-bounds behavior as a manual edit does.
-  y_scale <- plot$scales$get_scales("y")
-  y_scale$limits <- c(0, upper * 10)
+  yScale <- plot$scales$get_scales("y")
+  yScale$limits <- c(0, upper * 10)
   expanded <- ggplot2::ggplot_build(plot)$data[[index]]
   expect_equal(plot$layers[[index]]$data, raw)
   expect_equal(expanded$x, built$x)
-  visible_before <- is.finite(raw$dens) & raw$dens <= upper
-  visible_after <- is.finite(raw$dens) & raw$dens <= upper * 10
-  expect_equal(built$y[visible_before], raw$dens[visible_before])
-  expect_equal(expanded$y[visible_after], raw$dens[visible_after])
-  expect_true(any(visible_after & !visible_before))
+  visibleBefore <- is.finite(raw$dens) & raw$dens <= upper
+  visibleAfter <- is.finite(raw$dens) & raw$dens <= upper * 10
+  expect_equal(built$y[visibleBefore], raw$dens[visibleBefore])
+  expect_equal(expanded$y[visibleAfter], raw$dens[visibleAfter])
+  expect_true(any(visibleAfter & !visibleBefore))
   expect_true(any(expanded$y[is.finite(expanded$y)] > upper * 10))
   expect_equal(sum(is.infinite(expanded$y)), 2L)
   expect_warning(ggplot2::ggplotGrob(plot), NA)
@@ -167,23 +167,23 @@ test_that("Bayesian sampling - finite endpoint peaks and uniform overlays surviv
 test_that("Bayesian sampling - plotting leaves planning and inference numbers unchanged", {
   options <- .bsDensityOptionsForTest()
   options$planningPriorDistribution <- "impartial"
-  options$planningPlansTable <- TRUE
+  options$planningPlanTable <- TRUE
   options$planningThreeHypothesisBayesFactorTable <- TRUE
   options$planningMaximumSampleSize <- 40
-  with_plots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
+  withPlots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   options$planningPriorPlot <- options$inferencePosteriorPlot <- FALSE
-  without_plots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
-  expect_identical(with_plots$status, "complete")
-  expect_identical(without_plots$status, "complete")
+  withoutPlots <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
+  expect_identical(withPlots$status, "complete")
+  expect_identical(withoutPlots$status, "complete")
   for (key in c("planTable", "threeBFTable")) {
     name <- paste0("planContainer_", key)
-    before <- with_plots$results$planContainer$collection[[name]]$data
+    before <- withPlots$results$planContainer$collection[[name]]$data
     expect_gt(length(before), 0L)
-    expect_equal(without_plots$results$planContainer$collection[[name]]$data, before)
+    expect_equal(withoutPlots$results$planContainer$collection[[name]]$data, before)
   }
-  before <- with_plots$results$infContainer$collection$infContainer_inferenceDecisionTable$data
+  before <- withPlots$results$infContainer$collection$infContainer_inferenceDecisionTable$data
   expect_gt(length(before), 0L)
-  expect_equal(without_plots$results$infContainer$collection$infContainer_inferenceDecisionTable$data, before)
+  expect_equal(withoutPlots$results$infContainer$collection$infContainer_inferenceDecisionTable$data, before)
 })
 
 
@@ -202,11 +202,11 @@ test_that("Bayesian sampling - off-panel density coordinates stay bounded withou
 test_that("Bayesian sampling - an asymmetric U prior renders despite extremely large off-panel densities", {
   options <- .bsDensityOptionsForTest()
   options$planningPriorDistribution <- "impartial"
-  options$planningPriorImpartialShape <- "u_shaped"
+  options$planningPriorImpartialShape <- "uShaped"
   options$planningPriorImpartialCustomLocation <- TRUE
   options$planningPriorImpartialLocation <- .95
   options$planningRejectableQualityLevel <- .15
-  options$inferenceUseData <- FALSE
+  options$inferencePosterior <- FALSE
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   plot <- .bsDensityPlotForTest(result, "Prior")

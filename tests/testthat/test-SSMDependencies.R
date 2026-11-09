@@ -1,46 +1,46 @@
-.ssm_expected_fit_dependencies <- function() {
+.ssmExpectedFitDependencies <- function() {
   c("defectCount", "lotSize", "sampleSize", "lotNumber",
     "covariates",
     "modelInitialBaselineAlpha", "modelInitialBaselineBeta",
     "modelInnovationPriorScale", "modelPredictorCauchyScale",
     "advancedMcmcBurnin", "advancedMcmcChains",
-    "advancedMcmcSamples", "advancedMcmcThin",
+    "advancedMcmcSamples", "advancedMcmcThinning",
     "advancedMcmcSeed", "advancedMcmcAdaptDelta",
     "advancedMcmcMaxTreeDepth")
 }
 
-.ssm_capture_dependencies <- function(function_name) {
+.ssmCaptureDependencies <- function(functionName) {
   # Capture the real builder's declaration before creating Rcpp outputs or fitting.
   capture <- function(keys) {
     stop(structure(list(message = "Dependencies captured", call = NULL, keys = keys),
                    class = c("ssm_dependencies_captured", "condition")))
   }
   factory <- function(...) list(dependOn = capture)
-  fun <- getFromNamespace(function_name, "jaspAcceptanceSampling")
+  fun <- getFromNamespace(functionName, "jaspAcceptanceSampling")
   environment(fun) <- list2env(list(
     createJaspState = factory, createJaspTable = factory, createJaspPlot = factory,
     createJaspHtml = function(..., dependencies) capture(dependencies)
   ), parent = environment(fun))
-  options <- list(covariates = "x", mcmcDiagnosticsOverviewTable = TRUE,
-                  mcmcDiagnosticsPrint = TRUE,
-                  plotsStateTimeSeries = TRUE, plotsPosteriorPredictive = TRUE,
-                  plotsLatestDefectRate = TRUE, plotsPredictorCoefficients = TRUE)
-  results <- if (function_name == ".asSSM_reportDiagnostics")
+  options <- list(covariates = "x", mcmcDiagnosticOverviewTable = TRUE,
+                  mcmcDiagnosticReport = TRUE,
+                  plotStateTimeSeries = TRUE, plotPosteriorPredictive = TRUE,
+                  plotLatestDefectRate = TRUE, plotPredictorCoefficient = TRUE)
+  results <- if (functionName == ".asSSM_reportDiagnostics")
     list(fit = list(object = list())) else list()
   arguments <- list(jaspResults = results, options = options)
   if ("dataset" %in% names(formals(fun))) arguments["dataset"] <- list(NULL)
   captured <- tryCatch(do.call(fun, arguments), ssm_dependencies_captured = base::identity)
   if (!inherits(captured, "ssm_dependencies_captured"))
-    stop("The builder did not declare its dependencies: ", function_name)
+    stop("The builder did not declare its dependencies: ", functionName)
   captured$keys
 }
 
 test_that("the fit depends on every data, prior and sampler setting", {
-  dependencies <- getFromNamespace(".asSSM_fitDependencies", "jaspAcceptanceSampling")()
-  expected <- .ssm_expected_fit_dependencies()
+  dependencies <- getFromNamespace(".asSSM_getFitDependencies", "jaspAcceptanceSampling")()
+  expected <- .ssmExpectedFitDependencies()
   expect_setequal(dependencies, expected)
   expect_length(dependencies, length(expected))
-  expect_setequal(.ssm_capture_dependencies(".asSSM_fitModel"), expected)
+  expect_setequal(.ssmCaptureDependencies(".asSSM_fitModel"), expected)
 })
 
 test_that("every fitted output includes all model dependencies and its display controls", {
@@ -48,29 +48,29 @@ test_that("every fitted output includes all model dependencies and its display c
     .asSSM_createSummaryTable = c("settingsAcceptableQualityLevel", "settingsRejectableQualityLevel",
       "settingsAcceptanceThreshold", "settingsRejectionThreshold"),
     .asSSM_createPredictorSummaryTable = character(),
-    .asSSM_plotState = "plotsStateTimeSeries",
-    .asSSM_plotPrediction = c("plotsPosteriorPredictive", "settingsAcceptableQualityLevel", "settingsRejectableQualityLevel"),
-    .asSSM_plotPosteriorDist = "plotsLatestDefectRate",
-    .asSSM_plotBetaCoefficient = "plotsPredictorCoefficients",
-    .asSSM_createMcmcSummaryTable = c("mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsOverviewTheta",
-      "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta"),
-    .asSSM_reportDiagnostics = "mcmcDiagnosticsPrint"
+    .asSSM_plotState = "plotStateTimeSeries",
+    .asSSM_plotPrediction = c("plotPosteriorPredictive", "settingsAcceptableQualityLevel", "settingsRejectableQualityLevel"),
+    .asSSM_plotPosteriorDistribution = "plotLatestDefectRate",
+    .asSSM_plotBetaCoefficient = "plotPredictorCoefficient",
+    .asSSM_createMcmcSummaryTable = c("mcmcDiagnosticOverviewTable", "mcmcDiagnosticOverviewTheta",
+      "mcmcDiagnosticOverviewSigma", "mcmcDiagnosticOverviewPrediction", "mcmcDiagnosticOverviewBeta"),
+    .asSSM_reportDiagnostics = "mcmcDiagnosticReport"
   )
   for (name in names(extras)) {
-    declared <- .ssm_capture_dependencies(name)
-    expected <- c(.ssm_expected_fit_dependencies(), extras[[name]])
+    declared <- .ssmCaptureDependencies(name)
+    expected <- c(.ssmExpectedFitDependencies(), extras[[name]])
     expect_equal(sort(declared), sort(expected), info = name)
   }
 })
 
 test_that("changing decisions or output visibility does not invalidate the fit", {
-  display_controls <- c("settingsAcceptableQualityLevel", "settingsRejectableQualityLevel",
+  displayControls <- c("settingsAcceptableQualityLevel", "settingsRejectableQualityLevel",
     "settingsAcceptanceThreshold", "settingsRejectionThreshold",
-    "plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate", "plotsPredictorCoefficients",
-    "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsOverviewTheta", "mcmcDiagnosticsOverviewSigma", "mcmcDiagnosticsOverviewPrediction", "mcmcDiagnosticsOverviewBeta",
-    "mcmcDiagnosticsPrint")
-  declared <- .ssm_capture_dependencies(".asSSM_fitModel")
-  expect_length(intersect(declared, display_controls), 0L)
+    "plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate", "plotPredictorCoefficient",
+    "mcmcDiagnosticOverviewTable", "mcmcDiagnosticOverviewTheta", "mcmcDiagnosticOverviewSigma", "mcmcDiagnosticOverviewPrediction", "mcmcDiagnosticOverviewBeta",
+    "mcmcDiagnosticReport")
+  declared <- .ssmCaptureDependencies(".asSSM_fitModel")
+  expect_length(intersect(declared, displayControls), 0L)
 })
 
 test_that("the real fit cache signature retains every renamed sampler setting", {
@@ -83,7 +83,7 @@ test_that("the real fit cache signature retains every renamed sampler setting", 
   options$covariates <- character()
   expected <- list(
     advancedMcmcBurnin = 100, advancedMcmcChains = 2,
-    advancedMcmcSamples = 300, advancedMcmcThin = 3,
+    advancedMcmcSamples = 300, advancedMcmcThinning = 3,
     advancedMcmcSeed = 456, advancedMcmcAdaptDelta = .91,
     advancedMcmcMaxTreeDepth = 11
   )

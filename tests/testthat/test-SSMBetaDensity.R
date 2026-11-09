@@ -1,4 +1,4 @@
-.ssm_beta_plot_data <- function() {
+.ssmBetaPlotData <- function() {
   data.frame(
     count = c(1, 0, 2, 1, 0, 3, 1, 2), n = rep(20, 8), s = rep(100, 8),
     lot = 1:8,
@@ -7,7 +7,7 @@
     x3 = c(0, 1, 0, -1, 0, 2, -2, 1))
 }
 
-.ssm_beta_plot_fixture <- function() {
+.ssmBetaPlotFixture <- function() {
   fixture <- new.env(parent = emptyenv())
   fixture$generations <- 0L
   fixture$labels <- c(x1 = "Positive", x2 = "Negative", x3 = "Crossing zero")
@@ -23,12 +23,12 @@
     }
     if (is.null(jaspResults[["fit"]])) {
       state <- jaspBase::createJaspState()
-      state$dependOn(get(".asSSM_fitDependencies", ns)())
+      state$dependOn(get(".asSSM_getFitDependencies", ns)())
       jaspResults[["fit"]] <- state
     }
     if (!is.null(jaspResults[["fit"]]$object)) return()
     fixture$generations <- fixture$generations + 1L
-    design <- get(".asSSM_predictorDesign", ns)(dataset, options)
+    design <- get(".asSSM_createPredictorDesign", ns)(dataset, options)
     fixtureNames <- jaspSyntax::decodeColumnNames(design$names)
     design$labels <- unname(fixture$labels[fixtureNames])
     beta <- fixture$draws[, fixtureNames, drop = FALSE]
@@ -41,20 +41,20 @@
   fixture
 }
 
-.ssm_beta_plot_options <- function(predictors) {
+.ssmBetaPlotOptions <- function(predictors) {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
   assignments <- list(defectCount = "count", sampleSize = "n", lotSize = "s",
                       lotNumber = "lot", covariates = predictors)
   options[names(assignments)] <- assignments
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
-  options$plotsPredictorCoefficients <- TRUE
+  options$plotPredictorCoefficient <- TRUE
   options
 }
 
 test_that("coefficient curves retain their tails when axes are extended", {
-  fixture <- .ssm_beta_plot_fixture()
+  fixture <- .ssmBetaPlotFixture()
   # Replace fitting only; the normal runner creates and serializes the real plot.
   testthat::local_mocked_bindings(
     .asSSM_fitModel = fixture$fit,
@@ -63,12 +63,12 @@ test_that("coefficient curves retain their tails when axes are extended", {
     .package = "jaspAcceptanceSampling")
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
-  utils::write.csv(.ssm_beta_plot_data(), csv, row.names = FALSE)
+  utils::write.csv(.ssmBetaPlotData(), csv, row.names = FALSE)
 
   # Cover legacy scalar draws and several predictors in a non-default order.
   for (predictors in list("x1", c("x3", "x1", "x2"))) {
     result <- jaspTools::runAnalysis("BayesianSSMforAS", csv,
-      .ssm_beta_plot_options(predictors), view = FALSE)
+      .ssmBetaPlotOptions(predictors), view = FALSE)
     expect_identical(result$status, "complete")
     expect_null(result$results$betaPlot[["error"]])
     plot <- result$state$figures[[result$results$betaPlot$data]]$obj

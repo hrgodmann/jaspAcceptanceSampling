@@ -20,8 +20,8 @@ import JASP.Controls
 
 Group
 {
-	IntegerField { name: "lotSizeSingle"; label: qsTr("Lot size (N)"); defaultValue: 1000; min: 1 }
-	IntegerField { name: "sampleSizeSingle"; label: qsTr("Sample size (n)"); defaultValue: 100; min: 1; }
-	IntegerField { name: "acceptNumberSingle"; label: qsTr("Acceptance number (c)"); id: acceptNumberSingle; defaultValue: 4 }
-	IntegerField { name: "rejectNumberSingle"; label: qsTr("Rejection number (r)"); id: rejectNumberSingle; value: parseInt(acceptNumberSingle.value) + 1; enabled: false }
+	IntegerField { name: "singlePlanLotSize"; label: qsTr("Lot size (N)"); defaultValue: 1000; min: 1 }
+	IntegerField { name: "singlePlanSampleSize"; label: qsTr("Sample size (n)"); defaultValue: 100; min: 1; }
+	IntegerField { name: "singlePlanAcceptanceNumber"; label: qsTr("Acceptance number (c)"); id: singlePlanAcceptanceNumber; defaultValue: 4 }
+	IntegerField { name: "singlePlanRejectionNumber"; label: qsTr("Rejection number (r)"); id: singlePlanRejectionNumber; value: parseInt(singlePlanAcceptanceNumber.value) + 1; enabled: false }
 }

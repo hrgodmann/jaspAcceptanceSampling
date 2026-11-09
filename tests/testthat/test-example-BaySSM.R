@@ -3,11 +3,11 @@ context("Example: BaySSM")
 # Recalculate the saved example using its data and applicable settings.
 
 test_that("BayesianSSMforAS runs without error", {
-  old_module_dirs <- jaspTools:::getPkgOption("module.dirs")
-  old_reinstall_modules <- jaspTools:::getPkgOption("reinstall.modules")
+  oldModuleDirs <- jaspTools:::getPkgOption("module.dirs")
+  oldReinstallModules <- jaspTools:::getPkgOption("reinstall.modules")
   on.exit({
-    jaspTools::setPkgOption("module.dirs", old_module_dirs)
-    jaspTools::setPkgOption("reinstall.modules", old_reinstall_modules)
+    jaspTools::setPkgOption("module.dirs", oldModuleDirs)
+    jaspTools::setPkgOption("reinstall.modules", oldReinstallModules)
   }, add = TRUE)
 
   jaspTools::setPkgOption("module.dirs", normalizePath(testthat::test_path("..", "..")))
@@ -16,7 +16,7 @@ test_that("BayesianSSMforAS runs without error", {
   # Load from JASP example file
   jaspFile <- testthat::test_path("..", "..", "examples", "BaySSM.jasp")
   opts <- jaspTools::analysisOptions(jaspFile)
-  opts$mcmcDiagnosticsPrint <- TRUE
+  opts$mcmcDiagnosticReport <- TRUE
   dataset <- jaspTools::extractDatasetFromJASPFile(jaspFile)
 
   # Let the public runner encode the data and options.

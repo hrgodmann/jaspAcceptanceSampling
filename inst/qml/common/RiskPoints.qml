@@ -22,24 +22,24 @@ import JASP
 
 Group
 {
-	title: qsTr("Quality constraints")
-	property string suffix: ""
-	property bool include_limits: true
+	title: qsTr("Quality Constraints")
+	property string prefix: ""
+	property bool includeLimits: true
 	Group
 	{
 		columns: 2
-		Text { text: qsTr("Acceptable Quality Level (AQL)") }
-		DoubleField{ name: "aql" + suffix; label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: include_limits ? JASP.MinMax : JASP.None; decimals: 6 }
-		Text { text: qsTr("Rejectable Quality Level (RQL / LTPD)") }
-		DoubleField { name: "rql" + suffix; label: ""; negativeValues: false; defaultValue: 0.15; min: 0; max: 1; inclusive: include_limits ? JASP.MinMax : JASP.None; decimals: 6 }
+		Text { text: qsTr("Acceptable quality level (AQL)") }
+		DoubleField{ name: (prefix === "" ? "acceptableQualityLevel" : prefix + "AcceptableQualityLevel"); label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: includeLimits ? JASP.MinMax : JASP.None; decimals: 6 }
+		Text { text: qsTr("Rejectable quality level (RQL / LTPD)") }
+		DoubleField { name: (prefix === "" ? "rejectableQualityLevel" : prefix + "RejectableQualityLevel"); label: ""; negativeValues: false; defaultValue: 0.15; min: 0; max: 1; inclusive: includeLimits ? JASP.MinMax : JASP.None; decimals: 6 }
 	}
 
 	Group
 	{
 		columns: 2
 		Text { text: qsTr("Producer's risk (\u03B1)") }
-		DoubleField{ name: "prod_risk" + suffix; label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: include_limits ? JASP.MinMax : JASP.None; decimals: 6 }
+		DoubleField{ name: (prefix === "" ? "producerRisk" : prefix + "ProducerRisk"); label: ""; negativeValues: false; defaultValue: 0.05; min: 0; max: 1; inclusive: includeLimits ? JASP.MinMax : JASP.None; decimals: 6 }
 		Text { text: qsTr("Consumer's risk (\u03B2)") }
-		DoubleField { name: "cons_risk" + suffix; label: ""; negativeValues: false; defaultValue: 0.10; min: 0; max: 1; inclusive: include_limits ? JASP.MinMax : JASP.None; decimals: 6 }
+		DoubleField { name: (prefix === "" ? "consumerRisk" : prefix + "ConsumerRisk"); label: ""; negativeValues: false; defaultValue: 0.10; min: 0; max: 1; inclusive: includeLimits ? JASP.MinMax : JASP.None; decimals: 6 }
 	}
 }

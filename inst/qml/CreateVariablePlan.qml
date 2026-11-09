@@ -26,13 +26,13 @@ Form
 	IntegerField { name: "lotSize"; label: qsTr("Lot size (N)"); defaultValue: 1000; min: 1}
 	Common.RiskPoints
 	{
-		include_limits: false
+		includeLimits: false
 	}
 	
 	Group
 	{
 		columns: 2
-		CheckBox { name: "sd"; label: qsTr("Standard Deviation (Historical) known"); id: sd; checked: true }
+		CheckBox { name: "historicalSdKnown"; label: qsTr("Standard deviation (historical) known"); id: sd; checked: true }
 	}	
 
 	Common.ProbDefect {}

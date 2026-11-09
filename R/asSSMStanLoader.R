@@ -4,81 +4,81 @@
 # This file is kept separate from a future generated R/stanmodels.R so the
 # package can adopt the standard rstantools layout without name conflicts.
 
-.asSSM_cppModuleFactory <- function(module_name, class_name) {
+.asSSM_createCppModuleFactory <- function(moduleName, className) {
   # Socket workers must initialize their own Rcpp class. Capture only its names.
-  force(module_name)
-  force(class_name)
+  force(moduleName)
+  force(className)
   function(x) {
-    module <- Rcpp::Module(module_name, PACKAGE = "jaspAcceptanceSampling", mustStart = TRUE)
-    eval(substitute(M$X, list(M = module, X = as.name(class_name))))
+    module <- Rcpp::Module(moduleName, PACKAGE = "jaspAcceptanceSampling", mustStart = TRUE)
+    eval(substitute(M$X, list(M = module, X = as.name(className))))
   }
 }
 
 .asSSM_getStanModel <- local({
   cache <- new.env(parent = emptyenv())
-  .stanFile <- function(model_name) {
-    path <- system.file("stan", paste0(model_name, ".stan"), package = "jaspAcceptanceSampling")
+  .getStanFile <- function(modelName) {
+    path <- system.file("stan", paste0(modelName, ".stan"), package = "jaspAcceptanceSampling")
     if (!nzchar(path))
-      path <- file.path("inst", "stan", paste0(model_name, ".stan"))
+      path <- file.path("inst", "stan", paste0(modelName, ".stan"))
 
     if (!nzchar(path) || !file.exists(path))
-      stop("Stan model file not found for model: ", model_name, call. = FALSE)
+      stop("Stan model file not found for model: ", modelName, call. = FALSE)
 
     path
   }
 
-  .precompiled <- function(model_name, stan_file) {
-    expected_suffix <- paste0("_", model_name, "_mod")
-    module_candidates <- paste0("stan_fit4", model_name, "_mod")
+  .loadPrecompiledModel <- function(modelName, stanFile) {
+    expectedSuffix <- paste0("_", modelName, "_mod")
+    moduleCandidates <- paste0("stan_fit4", modelName, "_mod")
 
     reg <- tryCatch(getDLLRegisteredRoutines("jaspAcceptanceSampling"), error = function(e) NULL)
     if (!is.null(reg) && !is.null(reg[[".Call"]])) {
-      call_names <- names(reg[[".Call"]])
-      boot_names <- grep("^_rcpp_module_boot_.*_mod$", call_names, value = TRUE)
-      if (length(boot_names) > 0L) {
-        discovered <- sub("^_rcpp_module_boot_", "", boot_names)
-        discovered <- discovered[endsWith(discovered, expected_suffix)]
+      callNames <- names(reg[[".Call"]])
+      bootNames <- grep("^_rcpp_module_boot_.*_mod$", callNames, value = TRUE)
+      if (length(bootNames) > 0L) {
+        discovered <- sub("^_rcpp_module_boot_", "", bootNames)
+        discovered <- discovered[endsWith(discovered, expectedSuffix)]
         if (length(discovered) > 0L)
-          module_candidates <- unique(c(discovered, module_candidates))
+          moduleCandidates <- unique(c(discovered, moduleCandidates))
       }
     }
 
-    module_obj <- NULL
-    module_class <- NULL
+    moduleObj <- NULL
+    moduleClass <- NULL
 
-    for (module_name in module_candidates) {
-      class_name <- NULL
-      module_obj <- tryCatch(
-        Rcpp::Module(module_name, PACKAGE = "jaspAcceptanceSampling", mustStart = TRUE),
+    for (moduleName in moduleCandidates) {
+      className <- NULL
+      moduleObj <- tryCatch(
+        Rcpp::Module(moduleName, PACKAGE = "jaspAcceptanceSampling", mustStart = TRUE),
         error = function(e) NULL
       )
-      if (is.null(module_obj))
+      if (is.null(moduleObj))
         next
 
-      module_print <- capture.output(print(module_obj))
-      class_line <- grep("^\\s*\\d+\\s+classes\\s*:\\s*$", module_print)
-      if (length(class_line) > 0L) {
-        after <- trimws(module_print[(class_line[1] + 1L):length(module_print)])
+      modulePrint <- capture.output(print(moduleObj))
+      classLine <- grep("^\\s*\\d+\\s+classes\\s*:\\s*$", modulePrint)
+      if (length(classLine) > 0L) {
+        after <- trimws(modulePrint[(classLine[1] + 1L):length(modulePrint)])
         after <- after[nzchar(after)]
         if (length(after) > 0L)
-          class_name <- after[1L]
+          className <- after[1L]
       }
-      if (is.null(class_name) || !nzchar(class_name))
-        class_name <- paste0("rstantools_model_", model_name)
+      if (is.null(className) || !nzchar(className))
+        className <- paste0("rstantools_model_", modelName)
 
-      module_class <- tryCatch(
-        eval(substitute(M$X, list(M = module_obj, X = as.name(class_name)))),
+      moduleClass <- tryCatch(
+        eval(substitute(M$X, list(M = moduleObj, X = as.name(className)))),
         error = function(e) NULL
       )
-      if (!is.null(module_class))
+      if (!is.null(moduleClass))
         break
     }
 
-    if (is.null(module_class))
-      stop("Precompiled Stan module class not available for model: ", model_name, call. = FALSE)
+    if (is.null(moduleClass))
+      stop("Precompiled Stan module class not available for model: ", modelName, call. = FALSE)
 
     stanfit <- rstan::stanc_builder(
-      stan_file,
+      stanFile,
       allow_undefined = TRUE,
       obfuscate_model_name = FALSE
     )
@@ -92,28 +92,28 @@
       model_name = stanfit$model_name,
       model_code = stanfit$model_code,
       model_cpp = stanfit$model_cpp,
-      mk_cppmodule = .asSSM_cppModuleFactory(module_name, class_name)
+      mk_cppmodule = .asSSM_createCppModuleFactory(moduleName, className)
     )
   }
 
-  function(model_name) {
-    if (!model_name %in% c("complex", "simple"))
-      stop("Unknown Stan model: ", model_name, call. = FALSE)
+  function(modelName) {
+    if (!modelName %in% c("complex", "simple"))
+      stop("Unknown Stan model: ", modelName, call. = FALSE)
 
-    if (exists(model_name, envir = cache, inherits = FALSE))
-      return(get(model_name, envir = cache, inherits = FALSE))
+    if (exists(modelName, envir = cache, inherits = FALSE))
+      return(get(modelName, envir = cache, inherits = FALSE))
 
-    stan_file <- .stanFile(model_name)
+    stanFile <- .getStanFile(modelName)
 
     model <- tryCatch(
-      .precompiled(model_name, stan_file),
+      .loadPrecompiledModel(modelName, stanFile),
       error = function(e) {
         if (isTRUE(getOption("jaspAcceptanceSampling.allowStanFallback", FALSE))) {
-          header <- normalizePath(file.path(dirname(stan_file), "..", "include", "mixture_transport.hpp"),
+          header <- normalizePath(file.path(dirname(stanFile), "..", "include", "mixture_transport.hpp"),
                                   winslash = "/", mustWork = TRUE)
           return(rstan::stan_model(
-            file = stan_file,
-            model_name = paste0("jaspAcceptanceSampling_", model_name),
+            file = stanFile,
+            model_name = paste0("jaspAcceptanceSampling_", modelName),
             allow_undefined = TRUE,
             includes = paste0('\n#include "', header, '"\n'),
             auto_write = FALSE
@@ -121,13 +121,13 @@
         }
         stop(
           "Precompiled Stan model could not be loaded (",
-          model_name, "): ", e$message,
+          modelName, "): ", e$message,
           call. = FALSE
         )
       }
     )
 
-    assign(model_name, model, envir = cache)
+    assign(modelName, model, envir = cache)
     model
   }
 })

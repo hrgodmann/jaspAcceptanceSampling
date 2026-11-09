@@ -5,27 +5,27 @@
 ##---------------------------------------------------------------
 test_that("Create variable plan - plan table match", {
   options <- jaspTools::analysisOptions("CreateVariablePlan")
-  options$aql <- 0.05
-  options$rql <- 0.15
-  options$prod_risk <- 0.05
-  options$cons_risk <- 0.1
-  options$pd_lower <- 0
-  options$pd_upper <- 0.15
-  options$pd_step <- 0.01
+  options$acceptableQualityLevel <- 0.05
+  options$rejectableQualityLevel <- 0.15
+  options$producerRisk <- 0.05
+  options$consumerRisk <- 0.1
+  options$proportionNonconformingFrom <- 0
+  options$proportionNonconformingTo <- 0.15
+  options$proportionNonconformingStep <- 0.01
   
-  options$showSummary <- FALSE
-  options$showOCCurve <- FALSE
-  options$showAOQCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$summaryTable <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
   
   # 1.1 SD known
-  options$sd <- TRUE
+  options$historicalSdKnown <- TRUE
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   varTableKnown <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_plan_table"]][["data"]]
   jaspTools::expect_equal_tables(varTableKnown, list(24, 1.309))
 
   # 1.2 SD unknown
-  options$sd <- FALSE
+  options$historicalSdKnown <- FALSE
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   varTableUnknown <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_plan_table"]][["data"]]
   jaspTools::expect_equal_tables(varTableUnknown, list(44, 1.311))
@@ -36,21 +36,21 @@ test_that("Create variable plan - plan table match", {
 ##---------------------------------------------------------------
 test_that("Create plan - summary table match", {
   options <- jaspTools::analysisOptions("CreateVariablePlan")
-  options$aql <- 0.05
-  options$rql <- 0.35
-  options$prod_risk <- 0.15
-  options$cons_risk <- 0.20
-  options$pd_lower <- 0.20
-  options$pd_upper <- 0.80
-  options$pd_step <- 0.05
-  options$showSummary <- TRUE
+  options$acceptableQualityLevel <- 0.05
+  options$rejectableQualityLevel <- 0.35
+  options$producerRisk <- 0.15
+  options$consumerRisk <- 0.20
+  options$proportionNonconformingFrom <- 0.20
+  options$proportionNonconformingTo <- 0.80
+  options$proportionNonconformingStep <- 0.05
+  options$summaryTable <- TRUE
    
-  options$showOCCurve <- FALSE
-  options$showAOQCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
   
   # 2.1 SD known
-  options$sd <- TRUE
+  options$historicalSdKnown <- TRUE
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   summaryTableKnown <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_summaryTable"]][["data"]]
   jaspTools::expect_equal_tables(summaryTableKnown, list(
@@ -58,7 +58,7 @@ test_that("Create plan - summary table match", {
     0.0212, 0.6, 0.0122, 0.65, 0.0066, 0.7, 0.0033, 0.75, 0.0014, 0.8, 5e-04))
   
   # 2.2 SD unknown
-  options$sd <- FALSE
+  options$historicalSdKnown <- FALSE
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   summaryTableUnknown <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_summaryTable"]][["data"]]
   jaspTools::expect_equal_tables(summaryTableUnknown, list(
@@ -71,29 +71,29 @@ test_that("Create plan - summary table match", {
 ##----------------------------------------------------------------
 test_that("Create plan - OC Curve match", {
   options <- jaspTools::analysisOptions("CreateVariablePlan")
-  options$aql <- 0.001
-  options$rql <- 0.20
-  options$prod_risk <- 0.02
-  options$cons_risk <- 0.45
-  options$pd_lower <- 0.02
-  options$pd_upper <- 0.99
-  options$showOCCurve <- TRUE
+  options$acceptableQualityLevel <- 0.001
+  options$rejectableQualityLevel <- 0.20
+  options$producerRisk <- 0.02
+  options$consumerRisk <- 0.45
+  options$proportionNonconformingFrom <- 0.02
+  options$proportionNonconformingTo <- 0.99
+  options$operatingCharacteristicCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showAOQCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$summaryTable <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
   
   # 3.1 SD known
-  options$sd <- TRUE
-  options$pd_step <- 0.04
+  options$historicalSdKnown <- TRUE
+  options$proportionNonconformingStep <- 0.04
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_ocCurve"]][["data"]]
   testPlotKnown <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(testPlotKnown, "oc-operating-characteristics-curve-known")
   
   # 3.2 SD unknown
-  options$sd <- FALSE
-  options$pd_step <- 0.2
+  options$historicalSdKnown <- FALSE
+  options$proportionNonconformingStep <- 0.2
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_ocCurve"]][["data"]]
   testPlotUnknown <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -105,29 +105,29 @@ test_that("Create plan - OC Curve match", {
 ##---------------------------------------------------------------
 test_that("Create plan - AOQ Curve match", {
   options <- jaspTools::analysisOptions("CreateVariablePlan")
-  options$aql <- 0.10
-  options$rql <- 0.25
-  options$prod_risk <- 0.08
-  options$cons_risk <- 0.20
-  options$pd_lower <- 0.10
-  options$pd_upper <- 0.40
-  options$showAOQCurve <- TRUE
+  options$acceptableQualityLevel <- 0.10
+  options$rejectableQualityLevel <- 0.25
+  options$producerRisk <- 0.08
+  options$consumerRisk <- 0.20
+  options$proportionNonconformingFrom <- 0.10
+  options$proportionNonconformingTo <- 0.40
+  options$averageOutgoingQualityCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showOCCurve <- FALSE
-  options$showATICurve <- FALSE
+  options$summaryTable <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageTotalInspectionCurve <- FALSE
   
   # 4.1 SD known
-  options$sd <- TRUE
-  options$pd_step <- 0.01
+  options$historicalSdKnown <- TRUE
+  options$proportionNonconformingStep <- 0.01
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_aoqCurve"]][["data"]]
   testPlotKnown <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(testPlotKnown, "aoq-curve-known")
   
   # 4.2 SD unknown
-  options$sd <- FALSE
-  options$pd_step <- 0.2
+  options$historicalSdKnown <- FALSE
+  options$proportionNonconformingStep <- 0.2
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_aoqCurve"]][["data"]]
   testPlotUnknown <- results[["state"]][["figures"]][[plotName]][["obj"]]
@@ -139,29 +139,29 @@ test_that("Create plan - AOQ Curve match", {
 ##---------------------------------------------------------------
 test_that("Create plan - ATI Curve match", {
   options <- jaspTools::analysisOptions("CreateVariablePlan")
-  options$aql <- 0.20
-  options$rql <- 0.60
-  options$prod_risk <- 0.15
-  options$cons_risk <- 0.40
-  options$pd_lower <- 0.10
-  options$pd_upper <- 0.70
-  options$showATICurve <- TRUE
+  options$acceptableQualityLevel <- 0.20
+  options$rejectableQualityLevel <- 0.60
+  options$producerRisk <- 0.15
+  options$consumerRisk <- 0.40
+  options$proportionNonconformingFrom <- 0.10
+  options$proportionNonconformingTo <- 0.70
+  options$averageTotalInspectionCurve <- TRUE
   
-  options$showSummary <- FALSE
-  options$showOCCurve <- FALSE
-  options$showAOQCurve <- FALSE
+  options$summaryTable <- FALSE
+  options$operatingCharacteristicCurve <- FALSE
+  options$averageOutgoingQualityCurve <- FALSE
   
   # 5.1 SD known
-  options$sd <- TRUE
-  options$pd_step <- 0.05
+  options$historicalSdKnown <- TRUE
+  options$proportionNonconformingStep <- 0.05
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_atiCurve"]][["data"]]
   testPlotKnown <- results[["state"]][["figures"]][[plotName]][["obj"]]
   jaspTools::expect_equal_plots(testPlotKnown, "ati-curve-known")
   
   # 5.2 SD unknown
-  options$sd <- FALSE
-  options$pd_step <- 0.2
+  options$historicalSdKnown <- FALSE
+  options$proportionNonconformingStep <- 0.2
   results <- jaspTools::runAnalysis("CreateVariablePlan", "test.csv", options)
   plotName <- results[["results"]][["createVarContainer"]][["collection"]][["createVarContainer_atiCurve"]][["data"]]
   testPlotUnknown <- results[["state"]][["figures"]][[plotName]][["obj"]]

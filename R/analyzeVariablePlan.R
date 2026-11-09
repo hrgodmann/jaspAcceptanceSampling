@@ -24,12 +24,12 @@
 ##----------------------------------------------------------------
 AnalyzeVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
   # Dependency variables
-  plan_vars <- c("sampleSize", "kValue")
+  planVariables <- c("sampleSize", "kValue")
 
   # Check if the container already exists. Create it if it doesn't.
   if (is.null(jaspResults[["analyzeVarContainer"]]) || jaspResults[["analyzeVarContainer"]]$getError()) {
     analyzeVarContainer <- createJaspContainer(title = gettext("Analyze Variable Plan"))
-    analyzeVarContainer$dependOn(plan_vars) # Common dependencies
+    analyzeVarContainer$dependOn(planVariables) # Common dependencies
     jaspResults[["analyzeVarContainer"]] <- analyzeVarContainer
   } else {
     analyzeVarContainer <- jaspResults[["analyzeVarContainer"]]
@@ -38,23 +38,23 @@ AnalyzeVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
   N <- options$lotSize
   n <- options$sampleSize
   k <- options$kValue
-  sd <- if (options[["sd"]]) "known" else "unknown"
+  sd <- if (options[["historicalSdKnown"]]) "known" else "unknown"
 
   # Initialize the plan table
-  plan_table <- createJaspTable(title = gettextf("Variable Sampling Plan (Standard deviation assumed to be <b>%s</b>)", sd))
-  plan_table$transpose <- TRUE
-  plan_table$transposeWithOvertitle <- FALSE
-  plan_table$dependOn(c(plan_vars, "sd"))
-  plan_table$addColumnInfo(name = "col_0", title = "", type = "string") # Dummy row
-  plan_table$addColumnInfo(name = "col_1", title = gettext("Sample size"), type = "integer")
-  plan_table$addColumnInfo(name = "col_2", title = gettext("Critical Distance (k)"), type = "number")
-  plan_table$addRows(list("col_1" = n, "col_2" = k))
-  plan_table$showSpecifiedColumnsOnly <- TRUE
-  plan_table$position <- 1
-  analyzeVarContainer[["plan_table"]] <- plan_table
+  planTable <- createJaspTable(title = gettextf("Variable Sampling Plan (Standard deviation assumed to be <b>%s</b>)", sd))
+  planTable$transpose <- TRUE
+  planTable$transposeWithOvertitle <- FALSE
+  planTable$dependOn(c(planVariables, "historicalSdKnown"))
+  planTable$addColumnInfo(name = "col_0", title = "", type = "string") # Dummy row
+  planTable$addColumnInfo(name = "col_1", title = gettext("Sample Size"), type = "integer")
+  planTable$addColumnInfo(name = "col_2", title = gettext("Critical Distance (k)"), type = "number")
+  planTable$addRows(list("col_1" = n, "col_2" = k))
+  planTable$showSpecifiedColumnsOnly <- TRUE
+  planTable$position <- 1
+  analyzeVarContainer[["plan_table"]] <- planTable
 
   # Error check for n (sample size)
-  if (!options$sd && (n <= 1)) {
+  if (!options$historicalSdKnown && (n <= 1)) {
     analyzeVarContainer$setError(gettext("If historical standard deviation is unknown, sample size has to be > 1."))
     return ()
   }
@@ -71,38 +71,38 @@ AnalyzeVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
   }
 
   # Plan dataframe
-  df_plan <- plan$df_plan
-  oc_plan <- plan$oc_plan
+  planData <- plan$df_plan
+  operatingCharacteristic <- plan$oc_plan
 
-  risk_vars <- c("aql", "prod_risk", "rql", "cons_risk")
-  pd_vars <- c("pd_lower", "pd_upper", "pd_step")
+  riskVariables <- c("planAssessmentAcceptableQualityLevel", "planAssessmentProducerRisk", "planAssessmentRejectableQualityLevel", "planAssessmentConsumerRisk")
+  proportionVariables <- c("proportionNonconformingFrom", "proportionNonconformingTo", "proportionNonconformingStep")
 
   # 1. Assess plan
-  if (options$assessPlan) {
-    assessPlan(analyzeVarContainer, pos=2, c(risk_vars, pd_vars, "assessPlan"), oc_plan, options, "")
+  if (options$planAssessment) {
+    assessPlan(analyzeVarContainer, pos=2, c(riskVariables, proportionVariables, "planAssessment"), operatingCharacteristic, options, "")
     if (analyzeVarContainer$getError()) {
       return ()
     }
   }
 
   # 2. Plan summary
-  if (options$showSummary) {
+  if (options$summaryTable) {
     # Assess plan generates 2 output elements, so position of next element is previous + 2.
-    getSummary(analyzeVarContainer, pos=4, c(pd_vars, "showSummary"), df_plan)
+    getSummary(analyzeVarContainer, pos=4, c(proportionVariables, "summaryTable"), planData)
   }
   # 3. OC Curve
-  if (options$showOCCurve) {
-    getOCCurve(analyzeVarContainer, pos=5, c(pd_vars, "showOCCurve"), df_plan)
+  if (options$operatingCharacteristicCurve) {
+    getOCCurve(analyzeVarContainer, pos=5, c(proportionVariables, "operatingCharacteristicCurve"), planData)
   }
   # 4. AOQ Curve
-  if (options$showAOQCurve) {
-    getAOQCurve(analyzeVarContainer, pos=6, c(pd_vars, "showAOQCurve", "lotSize"), df_plan, options, "", n)
+  if (options$averageOutgoingQualityCurve) {
+    getAOQCurve(analyzeVarContainer, pos=6, c(proportionVariables, "averageOutgoingQualityCurve", "lotSize"), planData, options, "", n)
     if (analyzeVarContainer$getError()) {
       return ()
     }
   }
   # 5. ATI Curve
-  if (options$showATICurve) {
-    getATICurve(analyzeVarContainer, pos=7, c(pd_vars, "showATICurve", "lotSize"), df_plan, options, "", n)
+  if (options$averageTotalInspectionCurve) {
+    getATICurve(analyzeVarContainer, pos=7, c(proportionVariables, "averageTotalInspectionCurve", "lotSize"), planData, options, "", n)
   }
 }

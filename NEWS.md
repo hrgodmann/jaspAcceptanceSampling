@@ -17,10 +17,13 @@
 # jaspAcceptanceSampling (development version)
 
 ## Added
+* Added a simulated lot dataset with a numeric predictor and instructions for trying both Bayesian analyses.
 * The two-region impartial prior in Bayesian Sampling has an explicit Unimodal or U-shaped choice. The location specifies a peak or an interior minimum respectively; both shapes retain the 50/50 probability split at RQL.
 * Bayesian Sampling reports the acceptance number for the observed sample size and selected Bayes-factor target, shows the planning prior parameters, and provides more informative explanations when no sampling plan meets the target.
 
 ## Changed
+* Three-region impartial priors allow any Beta shape by default. Shape constraints are optional; saved selections are retained.
+* Standardized option names and choice values across the module. Classical analyses saved with earlier versions retain their settings through an automatic upgrade; the bundled Bayesian examples use the updated names.
 * Bayesian Sampling describes evidence for quality below versus at or above the RQL separately from whether the selected Bayes-factor target was reached, including exact target equality and targets at or below one.
 * Bayesian Sampling consistently describes counted items as defectives and their rate as the proportion defective.
 * Bayesian State-Space Sampling accepts multiple numeric covariates with additive effects, separate standardization and independent coefficient priors using one adjustable Cauchy scale. Coefficient outputs identify each covariate, and redundant covariates are rejected.
@@ -31,6 +34,11 @@
 * State-space model selection now follows the covariate assignments. A saved beta analysis with a retained covariate assignment uses that covariate on recalculation, even if its old model selector was set to exclude predictors. Clear the assignment to fit the model without covariates.
 
 ## Fixed
+* Simplified the Bayesian Sampling prior selector with visible shape choices, conditional settings directly beneath each prior, and separate planning criteria.
+* Unified the AQL/RQL labels and help in both Bayesian analyses, including the alternative term LTPD.
+* Standardized capitalization across analysis controls, help text, and output tables, and shortened the state-space summary group title to Selected Parameters.
+* Mathematical notation in the state-space help remains readable when the help viewer's equation rendering is unavailable.
+* Corrected the measurement-variable dependency in Accept/Reject Lots and ineffective option assignments in attribute-plan tests. Ordinal-input tests now check preserved lot labels and normalized values rather than an intermediate storage type.
 * State-space models initialize their compiled classes in each sampling worker, allowing parallel chains to run in fresh R processes on Windows.
 * State-space tests declare fixture measurement types and preserve native option formats during cache updates; failed saved-example checks now include the underlying analysis error.
 * Updated module tests for the native jaspTools input pipeline and GUI input bounds, retaining numerical reference and error-recovery coverage. Isolated the Stan-generation job's targeted rstan install from unrelated module Remotes; the shared JASP unit-test workflow is unchanged.

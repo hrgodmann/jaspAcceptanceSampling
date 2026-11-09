@@ -14,8 +14,8 @@ dir.create(scratch)
 # R also removes this session's temporary directory if a test fails.
 cat("Testing an isolated source copy in", scratch, "\n")
 
-source_dirs <- c("R", "inst/stan", "inst/include", "src", "tools")
-files <- c("DESCRIPTION", "NAMESPACE", unlist(lapply(source_dirs, function(path) {
+sourceDirectories <- c("R", "inst/stan", "inst/include", "src", "tools")
+files <- c("DESCRIPTION", "NAMESPACE", unlist(lapply(sourceDirectories, function(path) {
   entries <- list.files(file.path(package, path), recursive = TRUE,
                         all.files = TRUE, no.. = TRUE)
   file.path(path, entries)
@@ -28,12 +28,12 @@ for (file in files) {
     stop("Could not copy ", file, call. = FALSE)
 }
 
-native_files <- c("src/stanExports_simple.h", "src/stanExports_complex.h",
+nativeFiles <- c("src/stanExports_simple.h", "src/stanExports_complex.h",
                   "src/stanExports_simple.cc", "src/stanExports_complex.cc",
                   "src/RcppExports.cpp")
 rscript <- file.path(R.home("bin"),
                      if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-update_script <- file.path(scratch, "tools", "update-stan.R")
+updateScript <- file.path(scratch, "tools", "update-stan.R")
 
 expect <- function(ok, message) {
   if (!isTRUE(ok)) stop(message, "\nTest copy: ", scratch, call. = FALSE)
@@ -47,9 +47,9 @@ hashes <- function(paths = list.files(scratch, recursive = TRUE,
   values
 }
 
-run_update <- function(mode, succeeds) {
+runUpdate <- function(mode, succeeds) {
   output <- suppressWarnings(system2(rscript,
-    c("--vanilla", shQuote(update_script), mode, shQuote(scratch)),
+    c("--vanilla", shQuote(updateScript), mode, shQuote(scratch)),
     stdout = TRUE, stderr = TRUE))
   status <- attr(output, "status")
   if (is.null(status)) status <- 0L
@@ -68,78 +68,78 @@ restore <- function(paths) {
 
 # A current checkout must pass, and checking must not write into the package.
 baseline <- hashes()
-run_update("--check", TRUE)
+runUpdate("--check", TRUE)
 expect(identical(hashes(), baseline), "--check modified the source package.")
 cat("PASS: baseline check is read-only.\n")
 
-run_update("--invalid-option", FALSE)
+runUpdate("--invalid-option", FALSE)
 expect(identical(hashes(), baseline), "An invalid command modified the source package.")
 cat("PASS: invalid command is rejected without writes.\n")
 
 # Neither checking nor regeneration may silently drop a missing model.
-missing_stan <- "inst/stan/complex.stan"
-unlink(file.path(scratch, missing_stan))
+missingStan <- "inst/stan/complex.stan"
+unlink(file.path(scratch, missingStan))
 before <- hashes()
-run_update("--check", FALSE)
+runUpdate("--check", FALSE)
 expect(identical(hashes(), before), "Checking a missing model modified the package.")
-run_update("--write", FALSE)
+runUpdate("--write", FALSE)
 expect(identical(hashes(), before), "A missing model caused partial regeneration.")
-restore(missing_stan)
+restore(missingStan)
 expect(identical(hashes(), baseline), "The missing-model fixture was not restored.")
 cat("PASS: missing Stan source is rejected without writes.\n")
 
 # Missing generated files should be recoverable from the intact Stan sources.
-missing_header <- "src/stanExports_simple.h"
-unlink(file.path(scratch, missing_header))
+missingHeader <- "src/stanExports_simple.h"
+unlink(file.path(scratch, missingHeader))
 before <- hashes()
-run_update("--check", FALSE)
+runUpdate("--check", FALSE)
 expect(identical(hashes(), before), "Checking a missing header modified the package.")
-run_update("--write", TRUE)
-expect(identical(readLines(file.path(scratch, missing_header), warn = FALSE),
-                 readLines(file.path(package, missing_header), warn = FALSE)),
+runUpdate("--write", TRUE)
+expect(identical(readLines(file.path(scratch, missingHeader), warn = FALSE),
+                 readLines(file.path(package, missingHeader), warn = FALSE)),
        "Regeneration did not restore the missing header.")
-restore(native_files)
+restore(nativeFiles)
 expect(identical(hashes(), baseline), "Missing-header regeneration modified unrelated files.")
 cat("PASS: missing generated header is detected and restored.\n")
 
 # Test both models, both wrappers, and their shared native registration.
-for (file in native_files) {
+for (file in nativeFiles) {
   cat("\n// Deliberately stale generated output.\n",
       file = file.path(scratch, file), append = TRUE)
   before <- hashes()
-  output <- run_update("--check", FALSE)
+  output <- runUpdate("--check", FALSE)
   expect(any(grepl(basename(file), output, fixed = TRUE)),
          paste("The stale-file error did not identify", file))
   expect(identical(hashes(), before), paste("--check modified", file))
-  run_update("--write", TRUE)
-  for (generated in native_files) {
+  runUpdate("--write", TRUE)
+  for (generated in nativeFiles) {
     expect(identical(readLines(file.path(scratch, generated), warn = FALSE),
                      readLines(file.path(package, generated), warn = FALSE)),
            paste("Regeneration did not repair", generated))
   }
   # Preserve the original checkout's line endings for the next fixture.
-  restore(native_files)
+  restore(nativeFiles)
   expect(identical(hashes(), baseline), "Regeneration modified unrelated source files.")
   cat("PASS: stale", file, "is detected and repaired.\n")
 }
 
 # A valid change in each Stan model must invalidate its generated header.
 for (model in c("simple", "complex")) {
-  stan_file <- paste0("inst/stan/", model, ".stan")
-  text <- readLines(file.path(scratch, stan_file), warn = FALSE)
+  stanFile <- paste0("inst/stan/", model, ".stan")
+  text <- readLines(file.path(scratch, stanFile), warn = FALSE)
   changed <- sub("generated quantities {",
                  "generated quantities {\n  real build_test_value = 42;",
                  text, fixed = TRUE)
   expect(!identical(text, changed), "Could not insert the valid Stan test change.")
-  writeLines(changed, file.path(scratch, stan_file))
+  writeLines(changed, file.path(scratch, stanFile))
   before <- hashes()
-  run_update("--check", FALSE)
+  runUpdate("--check", FALSE)
   expect(identical(hashes(), before), "A stale-source check modified the package.")
-  run_update("--write", TRUE)
+  runUpdate("--write", TRUE)
   header <- paste0("src/stanExports_", model, ".h")
   expect(hashes(header) != baseline[header], "Changed Stan did not change its generated header.")
-  run_update("--check", TRUE)
-  restore(c(stan_file, native_files))
+  runUpdate("--check", TRUE)
+  restore(c(stanFile, nativeFiles))
   expect(identical(hashes(), baseline), "The valid-change fixture was not restored.")
   cat("PASS:", model, "Stan changes require and survive regeneration.\n")
 }
@@ -155,9 +155,9 @@ writeLines(sub("generated quantities {",
 cat("\nthis is deliberately invalid Stan;\n",
     file = file.path(scratch, complex), append = TRUE)
 before <- hashes()
-run_update("--check", FALSE)
+runUpdate("--check", FALSE)
 expect(identical(hashes(), before), "A failed check modified the source package.")
-run_update("--write", FALSE)
+runUpdate("--write", FALSE)
 expect(identical(hashes(), before), "Failed translation partially rewrote the package.")
 restore(c(simple, complex))
 expect(identical(hashes(), baseline), "The malformed-Stan fixture was not restored.")

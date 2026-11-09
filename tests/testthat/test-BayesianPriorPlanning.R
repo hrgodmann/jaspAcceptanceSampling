@@ -3,9 +3,9 @@
 .bsPriorPlanningOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
   options$planningPriorPlot <- TRUE
-  options$planningPlansTable <- FALSE
+  options$planningPlanTable <- FALSE
   options$planningThreeHypothesisBayesFactorTable <- FALSE
-  options$inferenceUseData <- FALSE
+  options$inferencePosterior <- FALSE
   options$planningMaximumSampleSize <- 1
   options$planningMinimumBayesFactor <- 30
   options
@@ -36,7 +36,7 @@ test_that("Bayesian sampling - prior-only output does not search for a sampling 
 test_that("Bayesian sampling - infeasible requested tables do not suppress a valid prior", {
   for (requested in list(c(TRUE, FALSE), c(FALSE, TRUE), c(TRUE, TRUE))) {
     options <- .bsPriorPlanningOptionsForTest()
-    options$planningPlansTable <- requested[1L]
+    options$planningPlanTable <- requested[1L]
     options$planningThreeHypothesisBayesFactorTable <- requested[2L]
     results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                      options = options, view = FALSE)
@@ -65,7 +65,7 @@ test_that("Bayesian sampling - infeasible requested tables do not suppress a val
 test_that("Bayesian sampling - invalid planning controls are rejected by the QML input bounds", {
   for (option in c("planningMaximumSampleSize", "planningMinimumBayesFactor")) {
     options <- .bsPriorPlanningOptionsForTest()
-    options$planningPlansTable <- TRUE
+    options$planningPlanTable <- TRUE
     options$planningThreeHypothesisBayesFactorTable <- TRUE
     options[[option]] <- 0
     expect_error(
@@ -76,10 +76,10 @@ test_that("Bayesian sampling - invalid planning controls are rejected by the QML
 
 test_that("Bayesian sampling - prior survives plan infeasibility, invalid BF targets, and recovery", {
   options <- .bsPriorPlanningOptionsForTest()
-  options$planningPlansTable <- TRUE
+  options$planningPlanTable <- TRUE
   options$planningThreeHypothesisBayesFactorTable <- TRUE
   options$planningMaximumSampleSize <- 40
-  original <- get(".bsPlanningAnalysis", asNamespace("jaspAcceptanceSampling"))
+  original <- get(".bsRunPlanningAnalysis", asNamespace("jaspAcceptanceSampling"))
   visited <- 0L
   observed <- list()
   wrapper <- function(jaspResults, options, position) {
@@ -105,7 +105,7 @@ test_that("Bayesian sampling - prior survives plan infeasibility, invalid BF tar
       observed[[visited + 1L]] <<- readCollection()
     }
   }
-  testthat::local_mocked_bindings(.bsPlanningAnalysis = wrapper,
+  testthat::local_mocked_bindings(.bsRunPlanningAnalysis = wrapper,
                                  .package = "jaspAcceptanceSampling")
   results <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL,
                                    options = options, view = FALSE)

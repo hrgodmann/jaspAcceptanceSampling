@@ -1,10 +1,10 @@
 # Invalid inputs must produce visible errors and recover in the real result engine.
 .bsInputErrorOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$planningPlansTable <- FALSE
+  options$planningPlanTable <- FALSE
   options$planningThreeHypothesisBayesFactorTable <- FALSE
   options$planningPriorPlot <- FALSE
-  options$inferenceUseData <- TRUE
+  options$inferencePosterior <- TRUE
   options$inferenceDecisionTable <- TRUE
   options$inferencePosteriorPlot <- TRUE
   options$inferencePosteriorPredictivePlot <- TRUE
@@ -24,7 +24,7 @@
 }
 
 .bsInputErrorSequenceForTest <- function(options, changes) {
-  original <- get(".bsInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
+  original <- get(".bsRunInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
   observed <- list()
   wrapper <- function(jaspResults, options, position) {
     private <- jaspResults$.__enclos_env__$private
@@ -38,15 +38,15 @@
       options[names(changes[[i]])] <- changes[[i]]
       private$changeOptions(as.character(jsonlite::toJSON(options, digits = NA)))
       jaspBase:::emptyRecomputed()
-      jaspAcceptanceSampling:::.bsProcedure(jaspResults, options, 0)
-      jaspAcceptanceSampling:::.bsPlanningAnalysis(jaspResults, options, 1)
+      jaspAcceptanceSampling:::.bsCreateProcedure(jaspResults, options, 0)
+      jaspAcceptanceSampling:::.bsRunPlanningAnalysis(jaspResults, options, 1)
       original(jaspResults, options, position)
       observed[[i + 1L]] <<- capture()
     }
   }
   result <- testthat::with_mocked_bindings(
     jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
-    .bsInferenceAnalysis = wrapper, .package = "jaspAcceptanceSampling")
+    .bsRunInferenceAnalysis = wrapper, .package = "jaspAcceptanceSampling")
   expect_identical(result$status, "complete")
   expect_length(observed, length(changes) + 1L)
   observed
@@ -130,14 +130,14 @@ test_that("Bayesian sampling - changing between input and prior errors removes t
     list(inferenceObservedDefectives = 0)))
   for (i in c(1L, 3L))
     .bsExpectInputErrorForTest(.bsInputErrorCollectionForTest(observed[[i]]), "The observed number of defectives (d) cannot exceed the sample size (n)")
-  prior_failure <- .bsInputErrorCollectionForTest(observed[[2L]])
-  expect_null(prior_failure$infContainer_inputError)
-  expect_null(prior_failure$infContainer_numericalError)
-  expect_identical(prior_failure$infContainer_priorError$status, "error")
-  expect_match(paste(prior_failure$infContainer_priorError$error$errorMessage, collapse = ""),
+  priorFailure <- .bsInputErrorCollectionForTest(observed[[2L]])
+  expect_null(priorFailure$infContainer_inputError)
+  expect_null(priorFailure$infContainer_numericalError)
+  expect_identical(priorFailure$infContainer_priorError$status, "error")
+  expect_match(paste(priorFailure$infContainer_priorError$error$errorMessage, collapse = ""),
                "0 < AQL < RQL < 1", fixed = TRUE)
   for (key in c("inferenceDecisionTable", "decisionSummaryText", "distPlotPosterior", "bfText", "ppdPlot"))
-    expect_null(prior_failure[[paste0("infContainer_", key)]])
+    expect_null(priorFailure[[paste0("infContainer_", key)]])
   recovered <- .bsInputErrorCollectionForTest(observed[[4L]])
   for (key in c("inputError", "priorError", "numericalError"))
     expect_null(recovered[[paste0("infContainer_", key)]])
@@ -148,9 +148,9 @@ test_that("Bayesian sampling - changing between input and prior errors removes t
 
 test_that("Bayesian sampling - legacy parent-container errors refresh without locked-state failures", {
   for (section in c("inference", "planning")) {
-    builder_name <- if (section == "inference") ".bsInferenceAnalysis" else ".bsPlanningAnalysis"
-    container_name <- if (section == "inference") "infContainer" else "planContainer"
-    original <- get(builder_name, asNamespace("jaspAcceptanceSampling"))
+    builderName <- if (section == "inference") ".bsRunInferenceAnalysis" else ".bsRunPlanningAnalysis"
+    containerName <- if (section == "inference") "infContainer" else "planContainer"
+    original <- get(builderName, asNamespace("jaspAcceptanceSampling"))
     observed <- list()
     wrapper <- function(jaspResults, options, position) {
       private <- jaspResults$.__enclos_env__$private
@@ -161,31 +161,31 @@ test_that("Bayesian sampling - legacy parent-container errors refresh without lo
       original(jaspResults, options, position)
       observed[[1L]] <<- capture()
       # Reproduce the old implementation's error on the actual existing container.
-      jaspResults[[container_name]]$setError("Legacy input error")
+      jaspResults[[containerName]]$setError("Legacy input error")
       observed[[2L]] <<- capture()
       jaspBase:::emptyRecomputed()
       original(jaspResults, options, position)
       observed[[3L]] <<- capture()
     }
     options <- .bsInputErrorOptionsForTest()
-    options$planningPlansTable <- section == "planning"
+    options$planningPlanTable <- section == "planning"
     options$planningThreeHypothesisBayesFactorTable <- section == "planning"
     options$planningPriorPlot <- section == "planning"
-    bindings <- setNames(list(wrapper), builder_name)
+    bindings <- setNames(list(wrapper), builderName)
     result <- do.call(testthat::with_mocked_bindings, c(list(
       quote(jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE))),
       bindings, list(.package = "jaspAcceptanceSampling")))
     expect_identical(result$status, "complete")
     expect_length(observed, 3L)
-    before <- observed[[1L]]$results[[container_name]]$collection
-    broken <- observed[[2L]]$results[[container_name]]$collection
-    recovered <- observed[[3L]]$results[[container_name]]$collection
-    table_key <- paste0(container_name, if (section == "planning") "_planTable" else "_inferenceDecisionTable")
-    expect_identical(broken[[table_key]]$status, "error")
-    expect_match(paste(broken[[table_key]]$error$errorMessage, collapse = ""), "Legacy input error", fixed = TRUE)
-    expect_identical(recovered[[table_key]]$status, "complete")
-    expect_null(recovered[[table_key]][["error"]])
-    expect_equal(recovered[[table_key]]$data, before[[table_key]]$data)
+    before <- observed[[1L]]$results[[containerName]]$collection
+    broken <- observed[[2L]]$results[[containerName]]$collection
+    recovered <- observed[[3L]]$results[[containerName]]$collection
+    tableKey <- paste0(containerName, if (section == "planning") "_planTable" else "_inferenceDecisionTable")
+    expect_identical(broken[[tableKey]]$status, "error")
+    expect_match(paste(broken[[tableKey]]$error$errorMessage, collapse = ""), "Legacy input error", fixed = TRUE)
+    expect_identical(recovered[[tableKey]]$status, "complete")
+    expect_null(recovered[[tableKey]][["error"]])
+    expect_equal(recovered[[tableKey]]$data, before[[tableKey]]$data)
     for (output in recovered) expect_null(output[["error"]])
     if (section == "planning") {
       expect_identical(recovered$planContainer_distPlotPrior$status, "complete")

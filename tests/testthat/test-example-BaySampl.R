@@ -4,11 +4,11 @@ context("Example: BaySampl")
 # The JASP file is stored in the module's examples/ folder.
 
 test_that("BayesianSampling runs without error", {
-  old_module_dirs <- jaspTools:::getPkgOption("module.dirs")
-  old_reinstall_modules <- jaspTools:::getPkgOption("reinstall.modules")
+  oldModuleDirs <- jaspTools:::getPkgOption("module.dirs")
+  oldReinstallModules <- jaspTools:::getPkgOption("reinstall.modules")
   on.exit({
-    jaspTools::setPkgOption("module.dirs", old_module_dirs)
-    jaspTools::setPkgOption("reinstall.modules", old_reinstall_modules)
+    jaspTools::setPkgOption("module.dirs", oldModuleDirs)
+    jaspTools::setPkgOption("reinstall.modules", oldReinstallModules)
   }, add = TRUE)
 
   jaspTools::setPkgOption("module.dirs", normalizePath(testthat::test_path("..", "..")))

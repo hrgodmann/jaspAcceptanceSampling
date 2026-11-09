@@ -2,16 +2,16 @@
 
 .bsThreeOptionsForTest <- function() {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  options$planningPriorDistribution <- "impartial_three"
+  options$planningPriorDistribution <- "impartialThreeRegion"
   options$planningAcceptableQualityLevel <- .05
   options$planningRejectableQualityLevel <- .15
-  options$planningPriorThreeRegionShapeConstraint <- "no_U"
+  options$planningPriorThreeRegionShapeConstraint <- "nonUShaped"
   options$planningMaximumSampleSize <- 1
   options$planningMinimumBayesFactor <- 1
-  options$planningPlansTable <- TRUE
+  options$planningPlanTable <- TRUE
   options$planningThreeHypothesisBayesFactorTable <- TRUE
   options$planningPriorPlot <- TRUE
-  options$inferenceUseData <- TRUE
+  options$inferencePosterior <- TRUE
   options$inferenceDecisionTable <- TRUE
   options$inferencePosteriorPlot <- FALSE
   options$inferencePosteriorPredictivePlot <- FALSE
@@ -30,24 +30,24 @@
   }, numeric(1))
 }
 
-test_that("Bayesian sampling - equal-thirds controls preserve existing defaults", {
+test_that("Bayesian sampling - equal-thirds constraints are optional by default", {
   options <- jaspTools::analysisOptions("BayesianSampling")
-  expect_identical(options$planningPriorThreeRegionShapeConstraint, "no_U")
+  expect_identical(options$planningPriorThreeRegionShapeConstraint, "none")
   expect_identical(options$planningPriorDistribution, "impartial")
   expect_identical(options$planningPriorImpartialShape, "unimodal")
-  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsPlanningDeps())
-  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsInferenceDeps())
+  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsGetPlanningDependencies())
+  expect_true("planningPriorThreeRegionShapeConstraint" %in% jaspAcceptanceSampling:::.bsGetInferenceDependencies())
 })
 
 test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis stages", {
   # QML accepts six decimals. Exact 1/3 and 2/3 (the uniform boundary)
   # are covered by test-BayesianThreeRegionPrior.R; this reachable pair is unimodal.
   cases <- list(
-    list(aql = .05, rql = .15, constraints = c("none", "no_U")),
-    list(aql = .05, rql = .055, constraints = c("none", "no_U", "both_ge_1")),
+    list(aql = .05, rql = .15, constraints = c("none", "nonUShaped")),
+    list(aql = .05, rql = .055, constraints = c("none", "nonUShaped", "bothAtLeastOne")),
     list(aql = .1, rql = .9, constraints = "none"),
-    list(aql = .333334, rql = .666666, constraints = c("none", "no_U", "both_ge_1")))
-  original_prior <- get(".bsCalculatePriorParams", asNamespace("jaspAcceptanceSampling"))
+    list(aql = .333334, rql = .666666, constraints = c("none", "nonUShaped", "bothAtLeastOne")))
+  originalPrior <- get(".bsCalculatePriorParameters", asNamespace("jaspAcceptanceSampling"))
   for (case in cases) {
     calibrated <- list()
     for (constraint in case$constraints) {
@@ -56,14 +56,14 @@ test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis 
       options$planningRejectableQualityLevel <- case$rql
       options$planningPriorThreeRegionShapeConstraint <- constraint
       captured <- list()
-      prior_wrapper <- function(...) {
-        params <- original_prior(...)
+      priorWrapper <- function(...) {
+        params <- originalPrior(...)
         captured[[length(captured) + 1L]] <<- params
         params
       }
       result <- testthat::with_mocked_bindings(
         jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
-        .bsCalculatePriorParams = prior_wrapper, .package = "jaspAcceptanceSampling")
+        .bsCalculatePriorParameters = priorWrapper, .package = "jaspAcceptanceSampling")
       expect_identical(result$status, "complete")
       expect_length(captured, 2L)
       expect_equal(captured[[2L]], captured[[1L]])
@@ -72,9 +72,9 @@ test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis 
       expect_true(all(is.finite(params) & params > 0))
       expect_equal(.bsThreeQuadratureForTest(params[1L], params[2L], case$aql, case$rql),
                    rep(1/3, 3L), tolerance = 1e-8)
-      if (constraint == "both_ge_1") {
+      if (constraint == "bothAtLeastOne") {
         expect_true(all(params >= 1))
-      } else if (constraint == "no_U") {
+      } else if (constraint == "nonUShaped") {
         expect_true(any(params >= 1))
       }
       planning <- .bsThreeCollectionForTest(result, "planContainer")
@@ -94,9 +94,9 @@ test_that("Bayesian sampling - feasible equal-thirds priors reach both analysis 
 
 test_that("Bayesian sampling - incompatible equal-thirds shape constraints show prior errors", {
   cases <- list(
-    list(aql = .05, rql = .15, constraint = "both_ge_1"),
-    list(aql = .1, rql = .9, constraint = "no_U"),
-    list(aql = .1, rql = .9, constraint = "both_ge_1"))
+    list(aql = .05, rql = .15, constraint = "bothAtLeastOne"),
+    list(aql = .1, rql = .9, constraint = "nonUShaped"),
+    list(aql = .1, rql = .9, constraint = "bothAtLeastOne"))
   for (case in cases) {
     options <- .bsThreeOptionsForTest()
     options$planningAcceptableQualityLevel <- case$aql
@@ -121,48 +121,48 @@ test_that("Bayesian sampling - incompatible equal-thirds shape constraints show 
 })
 
 test_that("Bayesian sampling - changing equal-thirds constraints clears stale outputs and recovers", {
-  original_inference <- get(".bsInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
-  for (case in list(list(aql = .05, rql = .15, valid = "no_U", invalid = "both_ge_1"),
-                    list(aql = .1, rql = .9, valid = "none", invalid = "no_U"))) {
+  originalInference <- get(".bsRunInferenceAnalysis", asNamespace("jaspAcceptanceSampling"))
+  for (case in list(list(aql = .05, rql = .15, valid = "nonUShaped", invalid = "bothAtLeastOne"),
+                    list(aql = .1, rql = .9, valid = "none", invalid = "nonUShaped"))) {
     options <- .bsThreeOptionsForTest()
     options$planningAcceptableQualityLevel <- case$aql
     options$planningRejectableQualityLevel <- case$rql
     options$planningPriorThreeRegionShapeConstraint <- case$valid
     options$inferencePosteriorPlot <- TRUE
     observed <- list()
-    cache_removed <- logical()
+    cacheRemoved <- logical()
     wrapper <- function(jaspResults, options, position) {
       private <- jaspResults$.__enclos_env__$private
       readOutput <- function() {
         private$complete()
         jsonlite::fromJSON(jaspTools:::getJsonResultsFromJaspResults(jaspResults), simplifyVector = FALSE)
       }
-      original_inference(jaspResults, options, position)
+      originalInference(jaspResults, options, position)
       observed[[1L]] <<- readOutput()
       for (i in seq_along(c(case$invalid, case$valid))) {
         options$planningPriorThreeRegionShapeConstraint <- c(case$invalid, case$valid)[i]
         private$changeOptions(as.character(jsonlite::toJSON(options)))
-        cache_removed <<- c(cache_removed, is.null(jaspResults[["planData"]]))
+        cacheRemoved <<- c(cacheRemoved, is.null(jaspResults[["planData"]]))
         jaspBase:::emptyRecomputed()
-        jaspAcceptanceSampling:::.bsPlanningAnalysis(jaspResults, options, 1)
-        original_inference(jaspResults, options, position)
+        jaspAcceptanceSampling:::.bsRunPlanningAnalysis(jaspResults, options, 1)
+        originalInference(jaspResults, options, position)
         observed[[i + 1L]] <<- readOutput()
       }
     }
     result <- testthat::with_mocked_bindings(
       jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
-      .bsInferenceAnalysis = wrapper, .package = "jaspAcceptanceSampling")
+      .bsRunInferenceAnalysis = wrapper, .package = "jaspAcceptanceSampling")
     expect_identical(result$status, "complete")
     expect_length(observed, 3L)
-    expect_true(all(cache_removed))
+    expect_true(all(cacheRemoved))
     for (container in c("planContainer", "infContainer")) {
       before <- .bsThreeCollectionForTest(observed[[1L]], container)
       failed <- .bsThreeCollectionForTest(observed[[2L]], container)
       restored <- .bsThreeCollectionForTest(observed[[3L]], container)
-      error_key <- paste0(container, "_priorError")
-      expect_null(before[[error_key]])
-      expect_identical(failed[[error_key]]$status, "error")
-      expect_null(restored[[error_key]])
+      errorKey <- paste0(container, "_priorError")
+      expect_null(before[[errorKey]])
+      expect_identical(failed[[errorKey]]$status, "error")
+      expect_null(restored[[errorKey]])
       keys <- if (container == "planContainer") c("planContainer_planTable", "planContainer_threeBFTable") else
         "infContainer_inferenceDecisionTable"
       for (key in keys) {
@@ -185,21 +185,21 @@ test_that("Bayesian sampling - old approximate equal-thirds plans are recalibrat
   options$planningRejectableQualityLevel <- .055
   options$planningPriorThreeRegionShapeConstraint <- "none"
   options$planningMaximumSampleSize <- 40
-  options$inferenceUseData <- FALSE
+  options$inferencePosterior <- FALSE
   options$planningPriorPlot <- FALSE
   ns <- asNamespace("jaspAcceptanceSampling")
-  original <- get(".bsPlanningAnalysis", ns)
-  original_generator <- get(".bsGeneratePlans", ns)
+  original <- get(".bsRunPlanningAnalysis", ns)
+  originalGenerator <- get(".bsGeneratePlans", ns)
   # Former penalized optimizer result; its masses were about .378/.244/.379.
-  old_params <- c(alpha = 40.482709790714104, beta = 725.36953613152332)
-  legacy <- original_generator(.05, .055, 40, 1, old_params[[1L]], old_params[[2L]], add_three_hyp = TRUE)
-  expect_identical(attr(legacy, "priorParameters"), old_params)
+  oldParams <- c(alpha = 40.482709790714104, beta = 725.36953613152332)
+  legacy <- originalGenerator(.05, .055, 40, 1, oldParams[[1L]], oldParams[[2L]], threeHypothesisComparison = TRUE)
+  expect_identical(attr(legacy, "priorParameters"), oldParams)
   generations <- 0L
-  observed_generations <- integer()
+  observedGenerations <- integer()
   observed <- list()
   generator <- function(...) {
     generations <<- generations + 1L
-    original_generator(...)
+    originalGenerator(...)
   }
   wrapper <- function(jaspResults, options, position) {
     private <- jaspResults$.__enclos_env__$private
@@ -210,25 +210,25 @@ test_that("Bayesian sampling - old approximate equal-thirds plans are recalibrat
     }
     original(jaspResults, options, position)
     observed[[1L]] <<- readTable()
-    observed_generations <<- c(observed_generations, generations)
+    observedGenerations <<- c(observedGenerations, generations)
     jaspBase:::emptyRecomputed()
     original(jaspResults, options, position)
-    observed_generations <<- c(observed_generations, generations)
+    observedGenerations <<- c(observedGenerations, generations)
     jaspResults[["planData"]]$object <- legacy
     jaspBase:::emptyRecomputed()
     original(jaspResults, options, position)
-    observed_generations <<- c(observed_generations, generations)
+    observedGenerations <<- c(observedGenerations, generations)
     observed[[2L]] <<- readTable()
   }
   result <- testthat::with_mocked_bindings(
     jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE),
-    .bsPlanningAnalysis = wrapper, .bsGeneratePlans = generator, .package = "jaspAcceptanceSampling")
+    .bsRunPlanningAnalysis = wrapper, .bsGeneratePlans = generator, .package = "jaspAcceptanceSampling")
   expect_identical(result$status, "complete")
-  expect_equal(observed_generations, c(1L, 1L, 2L))
+  expect_equal(observedGenerations, c(1L, 1L, 2L))
   expect_equal(observed[[2L]]$data, observed[[1L]]$data)
   row <- observed[[2L]]$data[[1L]]
   expect_equal(c(row$prior_good, row$prior_middle, row$prior_bad), rep(1/3, 3L), tolerance = 1e-8)
-  expect_gt(max(abs(.bsThreeQuadratureForTest(old_params[1L], old_params[2L], .05, .055) - 1/3)), .05)
+  expect_gt(max(abs(.bsThreeQuadratureForTest(oldParams[1L], oldParams[2L], .05, .055) - 1/3)), .05)
 })
 
 test_that("Bayesian sampling - exact-thirds planning and inference agree with density quadrature", {
@@ -237,26 +237,26 @@ test_that("Bayesian sampling - exact-thirds planning and inference agree with de
   options$planningMinimumBayesFactor <- 30
   options$planningPriorPlot <- FALSE
   ns <- asNamespace("jaspAcceptanceSampling")
-  original_prior <- get(".bsCalculatePriorParams", ns)
-  original_table <- get(".bsInferenceDecisionTable", ns)
+  originalPrior <- get(".bsCalculatePriorParameters", ns)
+  originalTable <- get(".bsCreateInferenceDecisionTable", ns)
   params <- NULL
-  inference_values <- NULL
+  inferenceValues <- NULL
   testthat::local_mocked_bindings(
-    .bsCalculatePriorParams = function(...) {
-      result <- original_prior(...)
+    .bsCalculatePriorParameters = function(...) {
+      result <- originalPrior(...)
       params <<- c(alpha = result$alpha, beta = result$beta)
       result
     },
-    .bsInferenceDecisionTable = function(container, n, d, N, aql, rql, log_bf, ppd, acceptanceNumber, ...) {
-      inference_values <<- list(log_bf = log_bf, ppd = ppd, c = acceptanceNumber)
-      original_table(container, n, d, N, aql, rql, log_bf, ppd, acceptanceNumber, ...)
+    .bsCreateInferenceDecisionTable = function(container, n, d, N, aql, rql, logBayesFactor, ppd, acceptanceNumber, ...) {
+      inferenceValues <<- list(log_bf = logBayesFactor, ppd = ppd, c = acceptanceNumber)
+      originalTable(container, n, d, N, aql, rql, logBayesFactor, ppd, acceptanceNumber, ...)
     }, .package = "jaspAcceptanceSampling")
   result <- jaspTools::runAnalysis("BayesianSampling", dataset = NULL, options = options, view = FALSE)
   expect_identical(result$status, "complete")
   prior <- .bsThreeQuadratureForTest(params[1L], params[2L], .05, .15)
   expect_equal(prior, rep(1/3, 3L), tolerance = 1e-8)
   regions <- function(n, d) .bsThreeQuadratureForTest(params[1L] + d, params[2L] + n - d, .05, .15)
-  binary_bf <- function(n, d) {
+  binaryBf <- function(n, d) {
     post <- regions(n, d)
     ((post[1L] + post[2L]) / post[3L]) / ((prior[1L] + prior[2L]) / prior[3L])
   }
@@ -265,30 +265,30 @@ test_that("Bayesian sampling - exact-thirds planning and inference agree with de
   three <- planning$planContainer_threeBFTable
   expect_identical(plan$status, "complete")
   expect_identical(three$status, "complete")
-  final_bf <- vapply(0:40, function(d) binary_bf(40, d), numeric(1))
-  max_c <- max((0:40)[final_bf >= 30])
-  expect_equal(vapply(plan$data, function(row) row$c, numeric(1)), 0:max_c)
+  finalBf <- vapply(0:40, function(d) binaryBf(40, d), numeric(1))
+  maxC <- max((0:40)[finalBf >= 30])
+  expect_equal(vapply(plan$data, function(row) row$c, numeric(1)), 0:maxC)
   expect_equal(vapply(three$data, function(row) row$n, numeric(1)),
                vapply(plan$data, function(row) row$n, numeric(1)))
   for (i in seq_along(plan$data)) {
     row <- plan$data[[i]]
     post <- regions(row$n, row$c)
-    expect_equal(row$bf_odds, binary_bf(row$n, row$c), tolerance = 1e-8)
-    expect_gte(binary_bf(row$n, row$c), 30)
-    expect_lt(binary_bf(row$n - 1, row$c), 30)
-    expect_lt(binary_bf(row$n, row$c + 1), 30)
-    expected_pairwise <- c((post[1L] / post[3L]) / (prior[1L] / prior[3L]),
+    expect_equal(row$bf_odds, binaryBf(row$n, row$c), tolerance = 1e-8)
+    expect_gte(binaryBf(row$n, row$c), 30)
+    expect_lt(binaryBf(row$n - 1, row$c), 30)
+    expect_lt(binaryBf(row$n, row$c + 1), 30)
+    expectedPairwise <- c((post[1L] / post[3L]) / (prior[1L] / prior[3L]),
                            (post[1L] / post[2L]) / (prior[1L] / prior[2L]),
                            (post[2L] / post[3L]) / (prior[2L] / prior[3L]))
-    three_row <- three$data[[i]]
-    expect_equal(c(three_row$BF_GB, three_row$BF_GM, three_row$BF_MB), expected_pairwise, tolerance = 1e-8)
-    expect_equal(c(three_row$post_good, three_row$post_middle, three_row$post_bad), post, tolerance = 1e-8)
+    threeRow <- three$data[[i]]
+    expect_equal(c(threeRow$BF_GB, threeRow$BF_GM, threeRow$BF_MB), expectedPairwise, tolerance = 1e-8)
+    expect_equal(c(threeRow$post_good, threeRow$post_middle, threeRow$post_bad), post, tolerance = 1e-8)
   }
-  expect_equal(exp(inference_values$log_bf), binary_bf(30, 0), tolerance = 1e-8)
-  expected_c <- max((0:30)[vapply(0:30, function(d) binary_bf(30, d), numeric(1)) >= 30])
-  expect_equal(inference_values$c, expected_c)
+  expect_equal(exp(inferenceValues$log_bf), binaryBf(30, 0), tolerance = 1e-8)
+  expectedC <- max((0:30)[vapply(0:30, function(d) binaryBf(30, d), numeric(1)) >= 30])
+  expect_equal(inferenceValues$c, expectedC)
   # Independent mixture integration for the remaining 70 items in this lot.
-  remaining_probability <- function(region) {
+  remainingProbability <- function(region) {
     stats::integrate(function(theta) {
       probability <- switch(region,
         good = pbinom(5, 70, theta),
@@ -297,7 +297,7 @@ test_that("Bayesian sampling - exact-thirds planning and inference agree with de
       probability * dbeta(theta, params[1L], params[2L] + 30)
     }, 0, 1, subdivisions = 2000L, rel.tol = 1e-9, abs.tol = 1e-11)$value
   }
-  expect_equal(unlist(inference_values$ppd, use.names = FALSE),
-               unname(vapply(c("good", "middle", "bad"), remaining_probability, numeric(1))),
+  expect_equal(unlist(inferenceValues$ppd, use.names = FALSE),
+               unname(vapply(c("good", "middle", "bad"), remainingProbability, numeric(1))),
                tolerance = 1e-8)
 })

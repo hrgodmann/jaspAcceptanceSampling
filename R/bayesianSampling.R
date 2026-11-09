@@ -21,30 +21,30 @@
 BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   # 0. Introductory Procedure Text (Always shown up front)
-  .bsProcedure(jaspResults, options, position = 0)
+  .bsCreateProcedure(jaspResults, options, position = 0)
 
   # 1. Planning
-  .bsPlanningAnalysis(jaspResults, options, position = 1)
+  .bsRunPlanningAnalysis(jaspResults, options, position = 1)
 
   # 2. Inference
-  .bsInferenceAnalysis(jaspResults, options, position = 10)
+  .bsRunInferenceAnalysis(jaspResults, options, position = 10)
 }
 
 # Dependency helpers
-.bsPlanningDeps <- function() {
+.bsGetPlanningDependencies <- function() {
   c(
     "planningMaximumSampleSize", "planningMinimumBayesFactor", "planningAcceptableQualityLevel", "planningRejectableQualityLevel", "planningPriorDistribution",
     "planningPriorAlpha", "planningPriorBeta",
     "planningPriorImpartialShape", "planningPriorImpartialCustomLocation", "planningPriorImpartialLocation",
     "planningPriorThreeRegionShapeConstraint",   # NEW
-    "planningPlansTable", "planningPriorPlot",
+    "planningPlanTable", "planningPriorPlot",
     "planningThreeHypothesisBayesFactorTable"
   )
 }
 
-.bsInferenceDeps <- function() {
+.bsGetInferenceDependencies <- function() {
   c(
-    "inferenceUseData",
+    "inferencePosterior",
 
     "planningAcceptableQualityLevel", "planningRejectableQualityLevel", "planningMinimumBayesFactor", "planningPriorDistribution", "planningPriorAlpha", "planningPriorBeta",
     "planningPriorImpartialShape", "planningPriorImpartialCustomLocation", "planningPriorImpartialLocation",
@@ -56,11 +56,11 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 }
 
 
-.bsNumericalError <- function() {
+.bsRaiseNumericalError <- function() {
   stop(gettext("The Bayes factor could not be calculated reliably for these inputs. Please adjust the quality limits or prior parameters."), call. = FALSE)
 }
 
-.bsLogBetaTailCF <- function(q, alpha, beta) {
+.bsComputeLogBetaTailContinuedFraction <- function(q, alpha, beta) {
   # Incomplete-beta continued fraction (DLMF 8.17.22-23), with modified Lentz updates.
   # https://dlmf.nist.gov/8.17#v
   # This is called for the small tail, where direct probability-scale beta
@@ -69,7 +69,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   tiny <- 1e-300
   guard <- function(value) {
     if (!is.finite(value))
-      .bsNumericalError()
+      .bsRaiseNumericalError()
     if (abs(value) < tiny) {
       if (value < 0) -tiny else tiny
     } else value
@@ -98,22 +98,22 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     }
   }
   if (!converged || !is.finite(fraction) || fraction <= 0)
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   result <- alpha * log(q) + beta * log1p(-q) - lbeta(alpha, beta) +
     log(fraction) - log(alpha)
   if (!is.finite(result) || result > 0)
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   result
 }
 
-.bsLogBetaTails <- function(q, alpha, beta) {
+.bsComputeLogBetaTails <- function(q, alpha, beta) {
   size <- max(length(q), length(alpha), length(beta))
   q <- rep_len(q, size)
   alpha <- rep_len(alpha, size)
   beta <- rep_len(beta, size)
   if (any(!is.finite(q) | q <= 0 | q >= 1 |
           !is.finite(alpha) | alpha <= 0 | !is.finite(beta) | beta <= 0))
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   lower <- suppressWarnings(pbeta(q, alpha, beta, log.p = TRUE))
   upper <- suppressWarnings(pbeta(q, alpha, beta, lower.tail = FALSE, log.p = TRUE))
   # R's beta series can also return inaccurate *finite* logs below the normal
@@ -125,20 +125,20 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
       q[i] < (alpha[i] + 1) / (alpha[i] + beta[i] + 2)
     } else lower[i] < upper[i]
     small <- if (lowerIsSmall) {
-      .bsLogBetaTailCF(q[i], alpha[i], beta[i])
+      .bsComputeLogBetaTailContinuedFraction(q[i], alpha[i], beta[i])
     } else {
-      .bsLogBetaTailCF(1 - q[i], beta[i], alpha[i])
+      .bsComputeLogBetaTailContinuedFraction(1 - q[i], beta[i], alpha[i])
     }
     large <- if (small < -log(2)) log1p(-exp(small)) else log(-expm1(small))
     lower[i] <- if (lowerIsSmall) small else large
     upper[i] <- if (lowerIsSmall) large else small
   }
   if (any(!is.finite(lower) | !is.finite(upper) | lower > 0 | upper > 0))
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   list(lower = lower, upper = upper)
 }
 
-.bsLogBetaInterval <- function(lower, upper, alpha, beta, lowerTails, upperTails) {
+.bsComputeLogBetaInterval <- function(lower, upper, alpha, beta, lowerTails, upperTails) {
   # Subtract in the better-separated tail using expm1, avoiding 1 - P.
   gaps <- c(upperTails$lower - lowerTails$lower,
             lowerTails$upper - upperTails$upper)
@@ -166,43 +166,43 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   ), error = function(e) NULL)
   if (is.null(integral) || integral$message != "OK" ||
       !is.finite(integral$value) || integral$value <= 0)
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   result <- log(width) + logPeak + log(integral$value)
   if (!is.finite(result) || result > 0)
-    .bsNumericalError()
+    .bsRaiseNumericalError()
   result
 }
 
-.bsLogThreeRegionProbs <- function(aql, rql, alpha, beta) {
-  atAQL <- .bsLogBetaTails(aql, alpha, beta)
-  atRQL <- .bsLogBetaTails(rql, alpha, beta)
-  c(good = atAQL$lower,
-    middle = .bsLogBetaInterval(aql, rql, alpha, beta, atAQL, atRQL),
-    bad = atRQL$upper)
+.bsComputeLogThreeRegionProbabilities <- function(aql, rql, alpha, beta) {
+  atAql <- .bsComputeLogBetaTails(aql, alpha, beta)
+  atRql <- .bsComputeLogBetaTails(rql, alpha, beta)
+  c(good = atAql$lower,
+    middle = .bsComputeLogBetaInterval(aql, rql, alpha, beta, atAql, atRql),
+    bad = atRql$upper)
 }
 
-.bsLogBF <- function(rql, n, c, alpha, beta, prior_log_tails = NULL) {
-  prior <- if (is.null(prior_log_tails)) .bsLogBetaTails(rql, alpha, beta) else prior_log_tails
-  post <- .bsLogBetaTails(rql, alpha + c, beta + n - c)
-  logBF <- (post$lower - post$upper) - (prior$lower - prior$upper)
+.bsComputeLogBayesFactor <- function(rql, n, c, alpha, beta, priorLogTails = NULL) {
+  prior <- if (is.null(priorLogTails)) .bsComputeLogBetaTails(rql, alpha, beta) else priorLogTails
+  post <- .bsComputeLogBetaTails(rql, alpha + c, beta + n - c)
+  logBayesFactor <- (post$lower - post$upper) - (prior$lower - prior$upper)
   # Round-off allowance for subtracting four log probabilities. This is a
   # numerical tie convention, not a change to the selected evidence target.
   tolerance <- 16 * .Machine$double.eps * pmax(
     1, abs(post$lower) + abs(post$upper) + abs(prior$lower) + abs(prior$upper)
   )
-  if (any(!is.finite(logBF) | !is.finite(tolerance)))
-    .bsNumericalError()
-  list(log_bf = logBF, tolerance = tolerance)
+  if (any(!is.finite(logBayesFactor) | !is.finite(tolerance)))
+    .bsRaiseNumericalError()
+  list(log_bf = logBayesFactor, tolerance = tolerance)
 }
 
-.bsMeetsLogBF <- function(log_bf, log_target, tolerance = 0) {
-  log_bf >= log_target - tolerance
+.bsMeetsLogBayesFactor <- function(logBayesFactor, logBayesFactorTarget, tolerance = 0) {
+  logBayesFactor >= logBayesFactorTarget - tolerance
 }
 
-.bsFormatBF <- function(log_bf, digits = 2L) {
-  vapply(log_bf, function(value) {
+.bsFormatBayesFactor <- function(logBayesFactor, digits = 2L) {
+  vapply(logBayesFactor, function(value) {
     if (!is.finite(value))
-      .bsNumericalError()
+      .bsRaiseNumericalError()
     if (value >= log(0.5 * 10^(-digits)) && value < log(1e6)) {
       displayed <- sprintf(paste0("%.", digits, "f"), exp(value))
       if (as.numeric(displayed) > 0)
@@ -219,8 +219,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   }, character(1), USE.NAMES = FALSE)
 }
 
-.bsBFColumn <- function(table, name, title, log_bf) {
-  values <- exp(log_bf)
+.bsCreateBayesFactorColumn <- function(table, name, title, logBayesFactor) {
+  values <- exp(logBayesFactor)
   if (all(is.finite(values) & values >= .Machine$double.xmin)) {
     table$addColumnInfo(name = name, title = title, type = "number", format = "sf:3")
     values
@@ -228,31 +228,31 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     # Avoid overflow, underflow and the loss of significant digits in subnormal
     # doubles. Keep the whole column consistently typed and show its magnitude.
     table$addColumnInfo(name = name, title = title, type = "string")
-    .bsFormatBF(log_bf, digits = 3L)
+    .bsFormatBayesFactor(logBayesFactor, digits = 3L)
   }
 }
 
 
-# Beta-Binomial PMF: P(X = x | n_trials, alpha, beta)
-.bsBetaBinomPMF <- function(x, n_trials, alpha, beta) {
+# Beta-Binomial PMF: P(X = x | trials, alpha, beta)
+.bsComputeBetaBinomialPmf <- function(x, trials, alpha, beta) {
   # Adjacent-count ratio p(k)/p(k-1) gives the same beta-binomial PMF
   # without subtracting large, nearly equal log-Beta values. Such subtraction
   # loses precision for the concentrated priors needed by close quality limits.
-  k <- seq_len(n_trials)
-  logRatio <- log(n_trials - k + 1) - log(k) +
-    log(alpha + (k - 1)) - log(beta + (n_trials - k))
+  k <- seq_len(trials)
+  logRatio <- log(trials - k + 1) - log(k) +
+    log(alpha + (k - 1)) - log(beta + (trials - k))
   logWeights <- c(0, cumsum(logRatio))
   weights <- exp(logWeights - max(logWeights))
   probabilities <- weights / sum(weights)
 
   result <- numeric(length(x))
-  valid <- is.finite(x) & x >= 0 & x <= n_trials & x == floor(x)
+  valid <- is.finite(x) & x >= 0 & x <= trials & x == floor(x)
   result[valid] <- probabilities[x[valid] + 1]
   result[is.na(x)] <- NA_real_
   result
 }
 
-.bsCountLimit <- function(proportion, lotSize) {
+.bsComputeCountLimit <- function(proportion, lotSize) {
   limit <- proportion * lotSize
   integerLimit <- round(limit)
   # Decimal input and multiplication can move an integer boundary by a few ulps.
@@ -269,64 +269,64 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 # Good:   D_tot <= floor(AQL * N)
 # Middle: floor(AQL * N) < D_tot <= floor(RQL * N)
 # Bad:    D_tot > floor(RQL * N)
-.bsPPDRegionProbs <- function(n, d, N, aql, rql, alpha, beta) {
-  alpha_post <- alpha + d
-  beta_post  <- beta + n - d
-  n_rem      <- N - n
+.bsComputePredictiveRegionProbabilities <- function(n, d, N, aql, rql, alpha, beta) {
+  posteriorAlpha <- alpha + d
+  posteriorBeta  <- beta + n - d
+  remainingItems      <- N - n
 
-  aql_count <- .bsCountLimit(aql, N)
-  rql_count <- .bsCountLimit(rql, N)
+  acceptableQualityCountLimit <- .bsComputeCountLimit(aql, N)
+  rejectableQualityCountLimit <- .bsComputeCountLimit(rql, N)
 
-  # D_rem ranges from 0 to n_rem; D_tot = d + D_rem
-  d_rem_vals <- 0:n_rem
-  pmf <- .bsBetaBinomPMF(d_rem_vals, n_rem, alpha_post, beta_post)
+  # Remaining defects range from 0 to remainingItems; total defects include observed defects.
+  remainingDefectCounts <- 0:remainingItems
+  pmf <- .bsComputeBetaBinomialPmf(remainingDefectCounts, remainingItems, posteriorAlpha, posteriorBeta)
 
-  d_tot <- d + d_rem_vals
+  totalDefectCounts <- d + remainingDefectCounts
 
-  p_good   <- sum(pmf[d_tot <= aql_count])
-  p_middle <- sum(pmf[d_tot > aql_count & d_tot <= rql_count])
-  p_bad    <- sum(pmf[d_tot > rql_count])
+  goodProbability   <- sum(pmf[totalDefectCounts <= acceptableQualityCountLimit])
+  middleProbability <- sum(pmf[totalDefectCounts > acceptableQualityCountLimit & totalDefectCounts <= rejectableQualityCountLimit])
+  badProbability    <- sum(pmf[totalDefectCounts > rejectableQualityCountLimit])
 
-  list(good = p_good, middle = p_middle, bad = p_bad)
+  list(good = goodProbability, middle = middleProbability, bad = badProbability)
 }
 
 # Full PPD PMF for D_tot
-.bsPPDFull <- function(n, d, N, alpha_post, beta_post) {
-  n_rem <- N - n
-  d_rem_vals <- 0:n_rem
-  pmf <- .bsBetaBinomPMF(d_rem_vals, n_rem, alpha_post, beta_post)
-  d_tot <- d + d_rem_vals
-  data.frame(d_tot = d_tot, pmf = pmf)
+.bsComputePredictiveDistribution <- function(n, d, N, posteriorAlpha, posteriorBeta) {
+  remainingItems <- N - n
+  remainingDefectCounts <- 0:remainingItems
+  pmf <- .bsComputeBetaBinomialPmf(remainingDefectCounts, remainingItems, posteriorAlpha, posteriorBeta)
+  totalDefectCounts <- d + remainingDefectCounts
+  data.frame(d_tot = totalDefectCounts, pmf = pmf)
 }
 
 
-.bsAcceptanceNumber <- function(n, rql, min_bf, alpha, beta) {
-  if (!is.finite(n) || !is.finite(rql) || !is.finite(min_bf) ||
-      !is.finite(alpha) || !is.finite(beta) || n < 0 || min_bf <= 0) {
+.bsComputeAcceptanceNumber <- function(n, rql, minimumBayesFactor, alpha, beta) {
+  if (!is.finite(n) || !is.finite(rql) || !is.finite(minimumBayesFactor) ||
+      !is.finite(alpha) || !is.finite(beta) || n < 0 || minimumBayesFactor <= 0) {
     return(NA_integer_)
   }
   counts <- seq.int(0L, as.integer(floor(n)))
-  evidence <- .bsLogBF(rql, n, counts, alpha, beta)
-  accepted <- counts[.bsMeetsLogBF(evidence$log_bf, log(min_bf), evidence$tolerance)]
+  evidence <- .bsComputeLogBayesFactor(rql, n, counts, alpha, beta)
+  accepted <- counts[.bsMeetsLogBayesFactor(evidence$log_bf, log(minimumBayesFactor), evidence$tolerance)]
   if (length(accepted)) max(accepted) else NA_integer_
 }
 
 # Utility functions
-.bsCalculatePriorParams <- function(prior, aql, rql,
+.bsCalculatePriorParameters <- function(prior, aql, rql,
                                     alpha = NULL, beta = NULL,
-                                    impartialCustomMode = FALSE,
-                                    impartialMode = NULL,
-                                    impartialThreeConstraint = "no_U",
+                                    impartialCustomLocation = FALSE,
+                                    impartialLocation = NULL,
+                                    impartialThreeRegionShapeConstraint = "none",
                                     impartialShape = "unimodal") {
 
   if (prior == "impartial") {
-    location <- if (isTRUE(impartialCustomMode) && !is.null(impartialMode)) impartialMode else aql
+    location <- if (isTRUE(impartialCustomLocation) && !is.null(impartialLocation)) impartialLocation else aql
     params <- .bsSolveImpartial(location, rql, shape = impartialShape)
     alpha  <- params$alpha
     beta   <- params$beta
 
-  } else if (prior == "impartial_three") {
-    params <- .bsSolveImpartialThree(aql, rql, constraint = impartialThreeConstraint)
+  } else if (prior == "impartialThreeRegion") {
+    params <- .bsSolveImpartialThreeRegion(aql, rql, constraint = impartialThreeRegionShapeConstraint)
     alpha <- params$alpha
     beta  <- params$beta
 
@@ -339,14 +339,14 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   list(alpha = alpha, beta = beta)
 }
 
-.bsSafePbeta <- function(x, a, b) {
+.bsComputeBetaProbability <- function(x, a, b) {
   out <- suppressWarnings(
     tryCatch(pbeta(x, a, b), error = function(e) NA_real_)
   )
   if (!is.finite(out)) NA_real_ else out
 }
 
-.bsIncreasingLogRoot <- function(f, failure, start = 0) {
+.bsFindIncreasingLogRoot <- function(f, failure, start = 0) {
   # The bounds are the range of positive representable doubles, not prior limits.
   lowerLimit <- log(.Machine$double.xmin) + log(.Machine$double.eps)
   upperLimit <- log(.Machine$double.xmax)
@@ -377,7 +377,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 .bsSolveThreeRegionBeta <- function(c1, c2,
                                     pi = c(1/3, 1/3, 1/3),
-                                    constraint = c("none", "no_U", "both_ge_1")) {
+                                    constraint = c("none", "nonUShaped", "bothAtLeastOne")) {
   constraint <- tryCatch(match.arg(constraint), error = function(e) {
     stop(gettext("Please select a valid shape constraint for the three-region prior."), call. = FALSE)
   })
@@ -394,11 +394,11 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
                   .bsFormatQuality(c1), .bsFormatQuality(c2)), call. = FALSE)
   }
   allowed <- function(p) {
-    switch(constraint, none = TRUE, no_U = any(p >= 1), both_ge_1 = all(p >= 1))
+    switch(constraint, none = TRUE, nonUShaped = any(p >= 1), bothAtLeastOne = all(p >= 1))
   }
   calibrated <- function(p) {
     if (any(!is.finite(p) | p <= 0)) return(FALSE)
-    probabilities <- exp(.bsLogThreeRegionProbs(c1, c2, p[1], p[2]))
+    probabilities <- exp(.bsComputeLogThreeRegionProbabilities(c1, c2, p[1], p[2]))
     all(is.finite(probabilities)) && all(abs(probabilities - pi) <= 1e-8)
   }
   p1 <- pi[1]
@@ -416,20 +416,20 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
         if (!is.finite(beta) || beta <= 0) failure()
         # Bracketing only needs a sign; probability-scale saturation at 0 or 1
         # is safe here because the target is interior. No BF uses these values.
-        value <- .bsSafePbeta(c1, alpha, beta)
+        value <- .bsComputeBetaProbability(c1, alpha, beta)
         if (!is.finite(value)) failure()
         value - p1
       }
-      .bsIncreasingLogRoot(objective, failure = failure,
+      .bsFindIncreasingLogRoot(objective, failure = failure,
                             start = logAlpha + log1p(-c1) - log(c1))
     }
     objective <- function(logAlpha) {
       logBeta <- betaForAlpha(logAlpha)
-      value <- .bsSafePbeta(c2, exp(logAlpha), exp(logBeta))
+      value <- .bsComputeBetaProbability(c2, exp(logAlpha), exp(logBeta))
       if (!is.finite(value)) failure()
       value - p2
     }
-    logAlpha <- .bsIncreasingLogRoot(objective, failure = failure)
+    logAlpha <- .bsFindIncreasingLogRoot(objective, failure = failure)
     logBeta <- betaForAlpha(logAlpha)
     p <- c(alpha = exp(logAlpha), beta = exp(logBeta))
     if (!calibrated(p)) failure()
@@ -451,7 +451,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
       distances <- vapply(candidates, function(p) sum((log(p) - log(parameters))^2), numeric(1))
       parameters <- candidates[[which.min(distances)]]
     } else {
-      message <- if (constraint == "no_U") {
+      message <- if (constraint == "nonUShaped") {
         gettext("The calibrated three-region Beta prior is U-shaped, which the selected shape constraint excludes. Change AQL/RQL, allow a U-shaped prior, or choose a Custom prior.")
       } else {
         gettext("The calibrated three-region Beta prior does not have both shape parameters at least 1, as required by the selected shape constraint. Change AQL/RQL, choose a different shape constraint, or choose a Custom prior.")
@@ -463,7 +463,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 }
 
 .bsSolveImpartial <- function(location, rql, shape = "unimodal") {
-  if (length(shape) != 1L || is.na(shape) || !shape %in% c("unimodal", "u_shaped"))
+  if (length(shape) != 1L || is.na(shape) || !shape %in% c("unimodal", "uShaped"))
     stop(gettext("Please select a valid shape for the impartial prior."), call. = FALSE)
   if (length(location) != 1L || !is.numeric(location) || !is.finite(location) ||
       location <= 0 || location >= 1 || length(rql) != 1L || !is.numeric(rql) ||
@@ -520,7 +520,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
       p <- parameters(t)
       if (any(!is.finite(p) | p <= 0))
         failure()
-      .bsLogBetaTails(rql, p[1], p[2])$lower + log(2)
+      .bsComputeLogBetaTails(rql, p[1], p[2])$lower + log(2)
     }
     # t=0 is the uniform boundary, used only to bracket, never as a valid answer.
     atZero <- log(rql) + log(2)
@@ -536,7 +536,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     validShape <- if (shape == "unimodal") all(p > 1) else all(p > 0 & p < 1)
     differences <- if (shape == "unimodal") p - 1 else 1 - p
     actualLocation <- differences[1] / sum(differences)
-    probability <- exp(.bsLogBetaTails(rql, p[1], p[2])$lower)
+    probability <- exp(.bsComputeLogBetaTails(rql, p[1], p[2])$lower)
     # Agreed absolute calibration accuracy, checked on the returned parameters.
     if (!validShape || !is.finite(actualLocation) || abs(actualLocation - location) > 1e-8 ||
         abs(probability - 0.5) > 1e-8)
@@ -545,8 +545,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   }, error = function(e) failure())
 }
 
-.bsSolveImpartialThree <- function(aql, rql,
-                                   constraint = c("none", "no_U", "both_ge_1")) {
+.bsSolveImpartialThreeRegion <- function(aql, rql,
+                                   constraint = c("none", "nonUShaped", "bothAtLeastOne")) {
   constraint <- match.arg(constraint)
   fit <- .bsSolveThreeRegionBeta(aql, rql,
                                  pi = c(1/3, 1/3, 1/3),
@@ -556,36 +556,36 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 
 
-.bsThreeRegionProbs <- function(aql, rql, alpha, beta) {
+.bsComputeThreeRegionProbabilities <- function(aql, rql, alpha, beta) {
   # Conversion is only for displayed probabilities; BFs use the log masses.
-  exp(.bsLogThreeRegionProbs(aql, rql, alpha, beta))
+  exp(.bsComputeLogThreeRegionProbabilities(aql, rql, alpha, beta))
 }
 
-.bsLogBFThreeHyp <- function(aql, rql, n, d, alpha, beta) {
-  prior <- .bsLogThreeRegionProbs(aql, rql, alpha, beta)
-  post <- .bsLogThreeRegionProbs(aql, rql, alpha + d, beta + n - d)
+.bsComputeThreeHypothesisLogBayesFactor <- function(aql, rql, n, d, alpha, beta) {
+  prior <- .bsComputeLogThreeRegionProbabilities(aql, rql, alpha, beta)
+  post <- .bsComputeLogThreeRegionProbabilities(aql, rql, alpha + d, beta + n - d)
   c(logBF_GB = unname((post["good"] - post["bad"]) - (prior["good"] - prior["bad"])),
     logBF_GM = unname((post["good"] - post["middle"]) - (prior["good"] - prior["middle"])),
     logBF_MB = unname((post["middle"] - post["bad"]) - (prior["middle"] - prior["bad"])))
 }
 
-.bsGeneratePlans <- function(aql, rql, max_n, min_bf, alpha, beta,
-                             add_three_hyp = FALSE) {
-  prior <- .bsLogBetaTails(rql, alpha, beta)
+.bsGeneratePlans <- function(aql, rql, maximumSampleSize, minimumBayesFactor, alpha, beta,
+                             threeHypothesisComparison = FALSE) {
+  prior <- .bsComputeLogBetaTails(rql, alpha, beta)
   plans <- data.frame(n = integer(), c = integer(), log_bf = numeric(),
                       log_bf_tolerance = numeric())
-  for (n in seq_len(max_n)) {
+  for (n in seq_len(maximumSampleSize)) {
     counts <- seq.int(0L, n)
-    evidence <- .bsLogBF(rql, n, counts, alpha, beta, prior)
-    accepted <- which(.bsMeetsLogBF(evidence$log_bf, log(min_bf), evidence$tolerance))
+    evidence <- .bsComputeLogBayesFactor(rql, n, counts, alpha, beta, prior)
+    accepted <- which(.bsMeetsLogBayesFactor(evidence$log_bf, log(minimumBayesFactor), evidence$tolerance))
     if (length(accepted)) {
       i <- max(accepted)
       plans <- rbind(plans, data.frame(n = n, c = counts[i],
                      log_bf = evidence$log_bf[i], log_bf_tolerance = evidence$tolerance[i]))
     }
   }
-  if (nrow(plans) && isTRUE(add_three_hyp)) {
-    lbf <- t(mapply(function(n, c) .bsLogBFThreeHyp(aql, rql, n, c, alpha, beta),
+  if (nrow(plans) && isTRUE(threeHypothesisComparison)) {
+    lbf <- t(mapply(function(n, c) .bsComputeThreeHypothesisLogBayesFactor(aql, rql, n, c, alpha, beta),
                     n = plans$n, c = plans$c))
     plans <- cbind(plans, as.data.frame(lbf))
   }
@@ -594,23 +594,23 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   plans
 }
 
-.bsCreateStateContainer <- function(title, deps) {
+.bsCreateStateContainer <- function(title, dependencies) {
   createJaspContainer(title = title) |>
-    createJaspState(jaspDeps(deps))
+    createJaspState(jaspDeps(dependencies))
 }
 
-.bsReuseOrRefreshContainer <- function(container, title, deps) {
+.bsReuseOrRefreshContainer <- function(container, title, dependencies) {
   if (is.null(container) || !isTRUE(container$getError()))
     return(container)
 
   # Callers populate a container directly; a state wrapper would be a locked
   # R6 environment here. Register dependencies on the replacement container.
-  createJaspContainer(title = title, dependencies = jaspDeps(deps))
+  createJaspContainer(title = title, dependencies = jaspDeps(dependencies))
 }
 
-.bsPPDXScale <- function(d_tot) {
-  xMin <- min(d_tot, na.rm = TRUE)
-  xMax <- max(d_tot, na.rm = TRUE)
+.bsCreatePredictiveXAxisScale <- function(totalDefectCounts) {
+  xMin <- min(totalDefectCounts, na.rm = TRUE)
+  xMax <- max(totalDefectCounts, na.rm = TRUE)
   breaks <- if (xMin == xMax) xMin else jaspGraphs::getPrettyAxisBreaks(c(xMin, xMax))
 
   list(
@@ -619,7 +619,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   )
 }
 
-.bsYScale <- function(values, expansion = 1.08) {
+.bsCreateYAxisScale <- function(values, expansion = 1.08) {
   yMax <- max(values, na.rm = TRUE)
   if (!is.finite(yMax) || yMax <= 0)
     yMax <- 1
@@ -635,9 +635,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   )
 }
 
-.bsThresholdLabelX <- function(x, side = c("left", "right"), lower, upper, min_offset = 0) {
+.bsComputeThresholdLabelX <- function(x, side = c("left", "right"), lower, upper, minimumOffset = 0) {
   side <- match.arg(side)
-  offset <- max((upper - lower) * 0.02, min_offset)
+  offset <- max((upper - lower) * 0.02, minimumOffset)
 
   if (side == "left")
     return(max(lower, x - offset))
@@ -645,14 +645,14 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   min(upper, x + offset)
 }
 
-.bsVisibleThreshold <- function(x, label, side, lower, upper, min_offset = 0) {
+.bsCreateVisibleThreshold <- function(x, label, side, lower, upper, minimumOffset = 0) {
   if (!is.finite(x) || x < lower || x > upper)
     return(NULL)
 
   data.frame(
     x = x,
     label = label,
-    label_x = .bsThresholdLabelX(x, side, lower, upper, min_offset = min_offset),
+    label_x = .bsComputeThresholdLabelX(x, side, lower, upper, minimumOffset = minimumOffset),
     hjust = if (identical(side, "left")) 1 else 0
   )
 }
@@ -663,7 +663,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   format(value, digits = 6, scientific = FALSE, trim = TRUE)
 }
 
-.bsPlanError <- function(container, options, message) {
+.bsSetPlanError <- function(container, options, message) {
   addError <- function(name, title, position, option) {
     if (isTRUE(options[[option]])) {
       container[[name]] <- createJaspTable(
@@ -672,46 +672,46 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
       container[[name]]$setError(message)
     }
   }
-  addError("planTable", gettext("Sampling Plans"), 1, "planningPlansTable")
+  addError("planTable", gettext("Sampling Plans"), 1, "planningPlanTable")
   addError("threeBFTable", gettext("Three-Hypothesis Bayes Factors (at d = c)"),
            3, "planningThreeHypothesisBayesFactorTable")
 }
 
-.bsInferenceError <- function(container, message, title = gettext("Inference"), name = "inputError") {
+.bsSetInferenceError <- function(container, message, title = gettext("Inference"), name = "inputError") {
   # Clear dependent results and previous errors before adding a visible child.
   # An error on an empty parent container alone is not displayed.
   for (output in c("inferenceDecisionTable", "decisionSummaryText", "distPlotPosterior",
                     "bfText", "ppdPlot", "priorError", "inputError", "numericalError"))
     container[[output]] <- NULL
   table <- createJaspTable(title = title, position = 0,
-                           dependencies = jaspDeps(.bsInferenceDeps()))
+                           dependencies = jaspDeps(.bsGetInferenceDependencies()))
   table$setError(message)
   container[[name]] <- table
 }
 
-.bsPriorError <- function(container, message, planning) {
+.bsSetPriorError <- function(container, message, planning) {
   if (!planning)
-    return(.bsInferenceError(container, message, gettext("Prior Distribution"), "priorError"))
+    return(.bsSetInferenceError(container, message, gettext("Prior Distribution"), "priorError"))
 
   for (name in c("planTable", "threeBFTable", "distPlotPrior"))
     container[[name]] <- NULL
   table <- createJaspTable(title = gettext("Prior Distribution"), position = 0,
-                           dependencies = jaspDeps(.bsPlanningDeps()))
+                           dependencies = jaspDeps(.bsGetPlanningDependencies()))
   table$setError(message)
   container[["priorError"]] <- table
 }
 
 # Section 1: Planning
-.bsPlanningAnalysis <- function(jaspResults, options, position) {
+.bsRunPlanningAnalysis <- function(jaspResults, options, position) {
 
-  if (!isTRUE(options$planningPlansTable) &&
+  if (!isTRUE(options$planningPlanTable) &&
       !isTRUE(options$planningPriorPlot) &&
       !isTRUE(options$planningThreeHypothesisBayesFactorTable)) {
     return()
   }
 
   container <- jaspResults[["planContainer"]] %setOrRetrieve% (
-    .bsCreateStateContainer(gettext("Planning"), .bsPlanningDeps())
+    .bsCreateStateContainer(gettext("Planning"), .bsGetPlanningDependencies())
   )
 
   if (is.null(container))
@@ -720,7 +720,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   # JASP can reuse an errored container across UI updates; rebuild it so a
   # corrected AQL/RQL pair can render fresh outputs instead of keeping a stale
   # error banner.
-  container <- .bsReuseOrRefreshContainer(container, gettext("Planning"), .bsPlanningDeps())
+  container <- .bsReuseOrRefreshContainer(container, gettext("Planning"), .bsGetPlanningDependencies())
 
   on.exit({
     jaspResults[["planContainer"]] <- container
@@ -728,25 +728,25 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   aql    <- options$planningAcceptableQualityLevel
   rql    <- options$planningRejectableQualityLevel
-  max_n  <- options$planningMaximumSampleSize
-  min_bf <- options$planningMinimumBayesFactor
+  maximumSampleSize  <- options$planningMaximumSampleSize
+  minimumBayesFactor <- options$planningMinimumBayesFactor
 
   if (!is.finite(aql) || !is.finite(rql) || aql <= 0 || rql <= 0 || aql >= rql || rql >= 1) {
-    .bsPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = TRUE)
+    .bsSetPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = TRUE)
     return()
   }
 
   priorParams <- tryCatch(
-    .bsCalculatePriorParams(
+    .bsCalculatePriorParameters(
       options$planningPriorDistribution, aql, rql,
       options$planningPriorAlpha, options$planningPriorBeta,
-      impartialCustomMode = options$planningPriorImpartialCustomLocation,
-      impartialMode = options$planningPriorImpartialLocation,
-      impartialThreeConstraint = options$planningPriorThreeRegionShapeConstraint,
+      impartialCustomLocation = options$planningPriorImpartialCustomLocation,
+      impartialLocation = options$planningPriorImpartialLocation,
+      impartialThreeRegionShapeConstraint = options$planningPriorThreeRegionShapeConstraint,
       impartialShape = options$planningPriorImpartialShape
     ),
     error = function(e) {
-      .bsPriorError(container, conditionMessage(e), planning = TRUE)
+      .bsSetPriorError(container, conditionMessage(e), planning = TRUE)
       jaspResults[["planData"]] <- NULL
       return(NULL)
     }
@@ -757,28 +757,28 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   if (!is.finite(priorParams$alpha) || !is.finite(priorParams$beta) ||
       priorParams$alpha <= 0 || priorParams$beta <= 0) {
-    .bsPriorError(container, gettext("The selected prior results in invalid Beta parameters. Please adjust AQL/RQL or choose a different prior."), planning = TRUE)
+    .bsSetPriorError(container, gettext("The selected prior results in invalid Beta parameters. Please adjust AQL/RQL or choose a different prior."), planning = TRUE)
     return()
   }
 
   container[["priorError"]] <- NULL
 
   if (isTRUE(options$planningPriorPlot)) {
-    .bsDistributionPlot(container, aql, rql, priorParams$alpha, priorParams$beta,
+    .bsCreateDistributionPlot(container, aql, rql, priorParams$alpha, priorParams$beta,
                         "Prior", position = 2, base = "planningPriorPlot")
   }
 
   # The prior is defined independently of the requested sampling plan.
-  if (!isTRUE(options$planningPlansTable) && !isTRUE(options$planningThreeHypothesisBayesFactorTable))
+  if (!isTRUE(options$planningPlanTable) && !isTRUE(options$planningThreeHypothesisBayesFactorTable))
     return()
 
-  if (!is.finite(max_n) || max_n <= 0) {
-    .bsPlanError(container, options, gettext("Please provide a valid maximum sample size (> 0)."))
+  if (!is.finite(maximumSampleSize) || maximumSampleSize <= 0) {
+    .bsSetPlanError(container, options, gettext("Please provide a valid maximum sample size (> 0)."))
     return()
   }
 
-  if (!is.finite(min_bf) || min_bf <= 0) {
-    .bsPlanError(container, options, gettext("Please provide a valid minimum Bayes factor (> 0)."))
+  if (!is.finite(minimumBayesFactor) || minimumBayesFactor <= 0) {
+    .bsSetPlanError(container, options, gettext("Please provide a valid minimum Bayes factor (> 0)."))
     return()
   }
 
@@ -791,12 +791,12 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     jaspResults[["planData"]] <- NULL
 
   plans <- tryCatch(jaspResults[["planData"]] %setOrRetrieve% (
-    .bsGeneratePlans(aql, rql, max_n, min_bf,
+    .bsGeneratePlans(aql, rql, maximumSampleSize, minimumBayesFactor,
                      priorParams$alpha, priorParams$beta,
-                     add_three_hyp = isTRUE(options$planningThreeHypothesisBayesFactorTable)) |>
-      createJaspState(jaspDeps(.bsPlanningDeps()))
+                     threeHypothesisComparison = isTRUE(options$planningThreeHypothesisBayesFactorTable)) |>
+      createJaspState(jaspDeps(.bsGetPlanningDependencies()))
   ), error = function(e) {
-    .bsPlanError(container, options, conditionMessage(e))
+    .bsSetPlanError(container, options, conditionMessage(e))
     NULL
   })
   if (is.null(plans))
@@ -804,68 +804,68 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   if (nrow(plans) == 0) {
     # Compute the maximum attainable BF (best case: n = max_n, d = 0)
-    maxEvidence <- .bsLogBF(rql, max_n, 0, priorParams$alpha, priorParams$beta)
+    maxEvidence <- .bsComputeLogBayesFactor(rql, maximumSampleSize, 0, priorParams$alpha, priorParams$beta)
 
-    .bsPlanError(container, options, gettextf(
+    .bsSetPlanError(container, options, gettextf(
       "No sampling plan found. With the current prior (Beta(%1$.2f, %2$.2f)) and maximum sample size (n = %3$d), the maximum attainable Bayes factor is %4$s. Consider increasing the maximum sample size, lowering the required Bayes factor, or adjusting the prior.",
-      priorParams$alpha, priorParams$beta, as.integer(max_n), .bsFormatBF(maxEvidence$log_bf)
+      priorParams$alpha, priorParams$beta, as.integer(maximumSampleSize), .bsFormatBayesFactor(maxEvidence$log_bf)
     ))
     return()
   }
 
-  if (isTRUE(options$planningPlansTable)) {
-    .bsPlanTable(container, plans, position = 1, base = "planningPlansTable",
+  if (isTRUE(options$planningPlanTable)) {
+    .bsCreatePlanTable(container, plans, position = 1, base = "planningPlanTable",
                  rql = rql, alpha = priorParams$alpha, beta = priorParams$beta)
   }
 
   if (isTRUE(options$planningThreeHypothesisBayesFactorTable)) {
-    .bsThreeBFTable(container, plans, position = 3, base = "planningThreeHypothesisBayesFactorTable",
+    .bsCreateThreeHypothesisBayesFactorTable(container, plans, position = 3, base = "planningThreeHypothesisBayesFactorTable",
                     aql = aql, rql = rql, alpha = priorParams$alpha, beta = priorParams$beta)
   }
 }
 
-.bsBFEvidenceText <- function(log_bf, tolerance = 0) {
-  if (.bsMeetsLogBF(log_bf, log(10), tolerance)) {
+.bsCreateBayesFactorEvidenceText <- function(logBayesFactor, tolerance = 0) {
+  if (.bsMeetsLogBayesFactor(logBayesFactor, log(10), tolerance)) {
     gettext("Strong evidence that the proportion defective is below the RQL.")
-  } else if (.bsMeetsLogBF(log_bf, log(3), tolerance)) {
+  } else if (.bsMeetsLogBayesFactor(logBayesFactor, log(3), tolerance)) {
     gettext("Moderate evidence that the proportion defective is below the RQL.")
-  } else if (.bsMeetsLogBF(log_bf, log(1/3), tolerance)) {
+  } else if (.bsMeetsLogBayesFactor(logBayesFactor, log(1/3), tolerance)) {
     gettext("Inconclusive evidence about whether the proportion defective is below the RQL.")
-  } else if (.bsMeetsLogBF(log_bf, log(1/10), tolerance)) {
+  } else if (.bsMeetsLogBayesFactor(logBayesFactor, log(1/10), tolerance)) {
     gettext("Moderate evidence that the proportion defective is at or above the RQL.")
   } else {
     gettext("Strong evidence that the proportion defective is at or above the RQL.")
   }
 }
 
-.bsBFTargetText <- function(log_bf, min_bf, tolerance = 0) {
-  target <- format(min_bf, digits = 15, scientific = FALSE, trim = TRUE)
-  text <- if (.bsMeetsLogBF(log_bf, log(min_bf), tolerance)) {
+.bsCreateBayesFactorTargetText <- function(logBayesFactor, minimumBayesFactor, tolerance = 0) {
+  target <- format(minimumBayesFactor, digits = 15, scientific = FALSE, trim = TRUE)
+  text <- if (.bsMeetsLogBayesFactor(logBayesFactor, log(minimumBayesFactor), tolerance)) {
     gettextf("The selected Bayes-factor target of %1$s has been reached.", target)
   } else {
     gettextf("The selected Bayes-factor target of %1$s has not been reached.", target)
   }
   text <- paste(text, gettext("Evidence labels and the target comparison use the unrounded Bayes factor."))
-  if (min_bf <= 1) {
+  if (minimumBayesFactor <= 1) {
     text <- paste(text, gettext("A target at or below 1 does not require evidence favoring a proportion defective below the RQL."))
   }
   text
 }
 
 # Section 2: Inference
-.bsInferenceAnalysis <- function(jaspResults, options, position) {
-  if (!isTRUE(options$inferenceUseData))
+.bsRunInferenceAnalysis <- function(jaspResults, options, position) {
+  if (!isTRUE(options$inferencePosterior))
     return()
 
   # Create/retrieve container + state
   container <- jaspResults[["infContainer"]] %setOrRetrieve% (
-    .bsCreateStateContainer(gettext("Inference"), .bsInferenceDeps())
+    .bsCreateStateContainer(gettext("Inference"), .bsGetInferenceDependencies())
   )
 
   if (is.null(container))
     return()
 
-  container <- .bsReuseOrRefreshContainer(container, gettext("Inference"), .bsInferenceDeps())
+  container <- .bsReuseOrRefreshContainer(container, gettext("Inference"), .bsGetInferenceDependencies())
 
   # Always write container back, even if we return early later
   on.exit({
@@ -876,21 +876,21 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   aql <- options$planningAcceptableQualityLevel
   rql <- options$planningRejectableQualityLevel
   if (!is.finite(aql) || !is.finite(rql) || aql <= 0 || rql <= 0 || aql >= rql || rql >= 1) {
-    .bsPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = FALSE)
+    .bsSetPriorError(container, gettext("Please ensure 0 < AQL < RQL < 1."), planning = FALSE)
     return()
   }
 
   priorParams <- tryCatch(
-    .bsCalculatePriorParams(
+    .bsCalculatePriorParameters(
       options$planningPriorDistribution, aql, rql,
       options$planningPriorAlpha, options$planningPriorBeta,
-      impartialCustomMode = options$planningPriorImpartialCustomLocation,
-      impartialMode = options$planningPriorImpartialLocation,
-      impartialThreeConstraint = options$planningPriorThreeRegionShapeConstraint,
+      impartialCustomLocation = options$planningPriorImpartialCustomLocation,
+      impartialLocation = options$planningPriorImpartialLocation,
+      impartialThreeRegionShapeConstraint = options$planningPriorThreeRegionShapeConstraint,
       impartialShape = options$planningPriorImpartialShape
     ),
     error = function(e) {
-      .bsPriorError(container, conditionMessage(e), planning = FALSE)
+      .bsSetPriorError(container, conditionMessage(e), planning = FALSE)
       return(NULL)
     }
   )
@@ -900,7 +900,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
   if (!is.finite(priorParams$alpha) || !is.finite(priorParams$beta) ||
       priorParams$alpha <= 0 || priorParams$beta <= 0) {
-    .bsPriorError(container, gettext("The selected prior results in invalid Beta parameters. Please adjust AQL/RQL or choose a different prior."), planning = FALSE)
+    .bsSetPriorError(container, gettext("The selected prior results in invalid Beta parameters. Please adjust AQL/RQL or choose a different prior."), planning = FALSE)
     return()
   }
 
@@ -909,72 +909,72 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   # Data
   n <- options$inferenceSampleSize
   d <- options$inferenceObservedDefectives
-  min_bf <- options$planningMinimumBayesFactor
+  minimumBayesFactor <- options$planningMinimumBayesFactor
 
   if (!is.finite(n) || !is.finite(d) || n < 0 || d < 0) {
-    .bsInferenceError(container, gettext("Please ensure the data are valid: n >= 0 and 0 <= d <= n."))
+    .bsSetInferenceError(container, gettext("Please ensure the data are valid: n >= 0 and 0 <= d <= n."))
     return()
   }
 
   if (d > n) {
-    .bsInferenceError(container, gettext("The observed number of defectives (d) cannot exceed the sample size (n). Check the defect count and sample size."))
+    .bsSetInferenceError(container, gettext("The observed number of defectives (d) cannot exceed the sample size (n). Check the defect count and sample size."))
     return()
   }
 
-  if (!is.finite(min_bf) || min_bf <= 0) {
-    .bsInferenceError(container, gettext("Please provide a valid minimum Bayes factor (> 0)."))
+  if (!is.finite(minimumBayesFactor) || minimumBayesFactor <= 0) {
+    .bsSetInferenceError(container, gettext("Please provide a valid minimum Bayes factor (> 0)."))
     return()
   }
 
   # Posterior
-  alpha_post <- priorParams$alpha + d
-  beta_post  <- priorParams$beta + n - d
+  posteriorAlpha <- priorParams$alpha + d
+  posteriorBeta  <- priorParams$beta + n - d
 
   # Outputs
   # Lot size for PPD
   N <- options$inferenceLotSize
   if (!is.finite(N) || N < n) {
-    .bsInferenceError(container, gettext("Lot size (N) must be at least as large as the sample size (n)."))
+    .bsSetInferenceError(container, gettext("Lot size (N) must be at least as large as the sample size (n)."))
     return()
   }
 
   container[["inputError"]] <- NULL
 
   # Compute PPD region probabilities (Beta-Binomial)
-  ppd <- .bsPPDRegionProbs(n, d, N, aql, rql, priorParams$alpha, priorParams$beta)
+  ppd <- .bsComputePredictiveRegionProbabilities(n, d, N, aql, rql, priorParams$alpha, priorParams$beta)
   numerical <- tryCatch(list(
-    evidence = .bsLogBF(rql, n, d, priorParams$alpha, priorParams$beta),
-    acceptanceNumber = .bsAcceptanceNumber(n, rql, min_bf, priorParams$alpha, priorParams$beta)
+    evidence = .bsComputeLogBayesFactor(rql, n, d, priorParams$alpha, priorParams$beta),
+    acceptanceNumber = .bsComputeAcceptanceNumber(n, rql, minimumBayesFactor, priorParams$alpha, priorParams$beta)
   ), error = function(e) {
-    .bsInferenceError(container, conditionMessage(e), gettext("Bayes Factor"), "numericalError")
+    .bsSetInferenceError(container, conditionMessage(e), gettext("Bayes Factor"), "numericalError")
     NULL
   })
   if (is.null(numerical))
     return()
   container[["numericalError"]] <- NULL
   evidence <- numerical$evidence
-  log_bf <- evidence$log_bf
+  logBayesFactor <- evidence$log_bf
   acceptanceNumber <- numerical$acceptanceNumber
-  bfInterpretation <- .bsBFEvidenceText(log_bf, evidence$tolerance)
-  targetInterpretation <- .bsBFTargetText(log_bf, min_bf, evidence$tolerance)
+  bfInterpretation <- .bsCreateBayesFactorEvidenceText(logBayesFactor, evidence$tolerance)
+  targetInterpretation <- .bsCreateBayesFactorTargetText(logBayesFactor, minimumBayesFactor, evidence$tolerance)
 
   if (isTRUE(options$inferenceDecisionTable)) {
-    .bsInferenceDecisionTable(container, n, d, N, aql, rql,
-                              log_bf, ppd, acceptanceNumber,
+    .bsCreateInferenceDecisionTable(container, n, d, N, aql, rql,
+                              logBayesFactor, ppd, acceptanceNumber,
                               position = 0, base = "inferenceDecisionTable")
 
     # Evidence strength and the selected planning target are separate criteria.
-    rql_count <- .bsCountLimit(rql, N)
+    rejectableQualityCountLimit <- .bsComputeCountLimit(rql, N)
     ppdGoodMiddle <- ppd$good + ppd$middle
 
     summaryText <- createJaspHtml(
       text = gettextf(
         "The <b>Bayes factor</b> in favor of the lot proportion defective being below the RQL of <b>%1$s</b> is approximately <b>%2$s</b>. %3$s %4$s<br>Based on the observed sample, there is a <b>%5$.1f%%</b> predicted probability that the current lot of %6$d items contains at most %7$d total defectives.",
-        .bsFormatQuality(rql), .bsFormatBF(log_bf), bfInterpretation, targetInterpretation,
-        ppdGoodMiddle * 100, as.integer(N), rql_count
+        .bsFormatQuality(rql), .bsFormatBayesFactor(logBayesFactor), bfInterpretation, targetInterpretation,
+        ppdGoodMiddle * 100, as.integer(N), rejectableQualityCountLimit
       ),
       position = 0.5,
-      dependencies = jaspDeps(.bsInferenceDeps())
+      dependencies = jaspDeps(.bsGetInferenceDependencies())
     )
     container[["decisionSummaryText"]] <- summaryText
   } else {
@@ -983,20 +983,20 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   }
 
   if (isTRUE(options$inferencePosteriorPlot)) {
-    .bsDistributionPlot(container, aql, rql, alpha_post, beta_post,
+    .bsCreateDistributionPlot(container, aql, rql, posteriorAlpha, posteriorBeta,
                         "Posterior", position = 1, base = "inferencePosteriorPlot",
-                        alpha_prior = priorParams$alpha, beta_prior = priorParams$beta)
+                        priorAlpha = priorParams$alpha, priorBeta = priorParams$beta)
 
     bfText <- createJaspHtml(
       text = paste(
         gettextf(
           "<u>Bayes factor</u> in favor of proportion defective < <u>%1$s</u> is approximately <b>%2$s</b>.",
-          .bsFormatQuality(rql), .bsFormatBF(log_bf)
+          .bsFormatQuality(rql), .bsFormatBayesFactor(logBayesFactor)
         ),
         bfInterpretation, targetInterpretation
       ),
       position = 2,
-      dependencies = jaspDeps(.bsInferenceDeps())
+      dependencies = jaspDeps(.bsGetInferenceDependencies())
     )
     container[["bfText"]] <- bfText
   } else {
@@ -1005,8 +1005,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   }
 
   if (isTRUE(options$inferencePosteriorPredictivePlot)) {
-    .bsPPDPlot(container, n, d, N, aql, rql,
-               alpha_post, beta_post,
+    .bsCreatePredictivePlot(container, n, d, N, aql, rql,
+               posteriorAlpha, posteriorBeta,
                position = 3, base = "inferencePosteriorPredictivePlot")
   } else {
     container[["ppdPlot"]] <- NULL
@@ -1016,7 +1016,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 
 # Tables
-.bsPlanTable <- function(container, plans, position, base = "planningPlansTable",
+.bsCreatePlanTable <- function(container, plans, position, base = "planningPlanTable",
                          rql, alpha, beta) {
 
 
@@ -1024,8 +1024,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   plans2 <- plans[order(plans$c, plans$n), , drop = FALSE]
   plans2 <- plans2[!duplicated(plans2$c), , drop = FALSE]
 
-  plans2$prior_p <- exp(.bsLogBetaTails(rql, alpha, beta)$lower)
-  plans2$post_p <- exp(.bsLogBetaTails(rql, alpha + plans2$c, beta + plans2$n - plans2$c)$lower)
+  plans2$prior_p <- exp(.bsComputeLogBetaTails(rql, alpha, beta)$lower)
+  plans2$post_p <- exp(.bsComputeLogBetaTails(rql, alpha + plans2$c, beta + plans2$n - plans2$c)$lower)
 
   table <- createJaspTable(
     title = gettext("Sampling Plans"),
@@ -1033,11 +1033,11 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     dependencies = jaspDeps(base)
   )
 
-  table$addColumnInfo(name = "c",       title = gettext("Acceptance number (c)"),  type = "integer")
-  table$addColumnInfo(name = "n",       title = gettext("Lowest sample size (n)"), type = "integer")
+  table$addColumnInfo(name = "c",       title = gettext("Acceptance Number (c)"),  type = "integer")
+  table$addColumnInfo(name = "n",       title = gettext("Lowest Sample Size (n)"), type = "integer")
   table$addColumnInfo(name = "prior_p", title = gettext("Prior P(θ < RQL)"),       type = "number")
   table$addColumnInfo(name = "post_p",  title = gettext("Posterior P(θ < RQL)"),   type = "number")
-  plans2$bf_odds <- .bsBFColumn(table, "bf_odds", gettext("Bayes factor"), plans2$log_bf)
+  plans2$bf_odds <- .bsCreateBayesFactorColumn(table, "bf_odds", gettext("Bayes Factor"), plans2$log_bf)
 
   table$setData(plans2[c("c", "n", "prior_p", "post_p", "bf_odds")])
 
@@ -1048,7 +1048,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 }
 
 
-.bsThreeBFTable <- function(container, plans, position, base = "planningThreeHypothesisBayesFactorTable",
+.bsCreateThreeHypothesisBayesFactorTable <- function(container, plans, position, base = "planningThreeHypothesisBayesFactorTable",
                             aql, rql, alpha, beta) {
 
   needed <- c("n", "c", "logBF_GB", "logBF_GM", "logBF_MB")
@@ -1059,21 +1059,21 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   plans2 <- plans2[!duplicated(plans2$c), , drop = FALSE]
 
   # Prior region probs (constant)
-  prior <- .bsThreeRegionProbs(aql, rql, alpha, beta)
+  prior <- .bsComputeThreeRegionProbabilities(aql, rql, alpha, beta)
   plans2$prior_good   <- unname(prior["good"])
   plans2$prior_middle <- unname(prior["middle"])
   plans2$prior_bad    <- unname(prior["bad"])
 
   # Posterior region probs at d = c (row-wise)
-  post_matrix <- t(mapply(
-    FUN = function(a_post, b_post) .bsThreeRegionProbs(aql, rql, a_post, b_post),
-    a_post = alpha + plans2$c,
-    b_post = beta + plans2$n - plans2$c
+  posteriorProbabilities <- t(mapply(
+    FUN = function(posteriorAlpha, posteriorBeta) .bsComputeThreeRegionProbabilities(aql, rql, posteriorAlpha, posteriorBeta),
+    posteriorAlpha = alpha + plans2$c,
+    posteriorBeta = beta + plans2$n - plans2$c
   ))
 
-  plans2$post_good   <- unname(post_matrix[, "good"])
-  plans2$post_middle <- unname(post_matrix[, "middle"])
-  plans2$post_bad    <- unname(post_matrix[, "bad"])
+  plans2$post_good   <- unname(posteriorProbabilities[, "good"])
+  plans2$post_middle <- unname(posteriorProbabilities[, "middle"])
+  plans2$post_bad    <- unname(posteriorProbabilities[, "bad"])
 
   table <- createJaspTable(
     title = gettext("Three-Hypothesis Bayes Factors (at d = c)"),
@@ -1081,8 +1081,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     dependencies = jaspDeps(base)
   )
 
-  table$addColumnInfo(name = "c", title = gettext("Acceptance number (c)"),  type = "integer")
-  table$addColumnInfo(name = "n", title = gettext("Lowest sample size (n)"), type = "integer")
+  table$addColumnInfo(name = "c", title = gettext("Acceptance Number (c)"),  type = "integer")
+  table$addColumnInfo(name = "n", title = gettext("Lowest Sample Size (n)"), type = "integer")
 
   table$addColumnInfo(name = "prior_good",   title = gettext("Prior P(Good)"),   type = "number")
   table$addColumnInfo(name = "post_good",    title = gettext("Post P(Good)"),    type = "number")
@@ -1091,9 +1091,9 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   table$addColumnInfo(name = "prior_bad",    title = gettext("Prior P(Bad)"),    type = "number")
   table$addColumnInfo(name = "post_bad",     title = gettext("Post P(Bad)"),     type = "number")
 
-  plans2$BF_GB <- .bsBFColumn(table, "BF_GB", gettext("BF (Good vs Bad)"), plans2$logBF_GB)
-  plans2$BF_GM <- .bsBFColumn(table, "BF_GM", gettext("BF (Good vs Middle)"), plans2$logBF_GM)
-  plans2$BF_MB <- .bsBFColumn(table, "BF_MB", gettext("BF (Middle vs Bad)"), plans2$logBF_MB)
+  plans2$BF_GB <- .bsCreateBayesFactorColumn(table, "BF_GB", gettext("BF (Good vs Bad)"), plans2$logBF_GB)
+  plans2$BF_GM <- .bsCreateBayesFactorColumn(table, "BF_GM", gettext("BF (Good vs Middle)"), plans2$logBF_GM)
+  plans2$BF_MB <- .bsCreateBayesFactorColumn(table, "BF_MB", gettext("BF (Middle vs Bad)"), plans2$logBF_MB)
 
   table$setData(plans2[c(
     "c", "n",
@@ -1109,7 +1109,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 
 
 # Plots
-.bsBetaDensityGrid <- function(alpha, beta) {
+.bsCreateBetaDensityGrid <- function(alpha, beta) {
   # Combine full-support coverage with probability-spaced points and the exact
   # interior mode. Each curve gets its own grid, including a narrow posterior
   # over a broad prior. Log-spaced edge points resolve both tails symmetrically.
@@ -1138,10 +1138,10 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   x
 }
 
-.bsDistributionPlot <- function(container, aql, rql, alpha, beta, type,
-                                position, base, alpha_prior = NULL, beta_prior = NULL) {
+.bsCreateDistributionPlot <- function(container, aql, rql, alpha, beta, type,
+                                position, base, priorAlpha = NULL, priorBeta = NULL) {
   plotName <- paste0("distPlot", type)
-  hasPriorOverlay <- identical(type, "Posterior") && !is.null(alpha_prior) && !is.null(beta_prior)
+  hasPriorOverlay <- identical(type, "Posterior") && !is.null(priorAlpha) && !is.null(priorBeta)
 
   plot <- createJaspPlot(
     title = if (type == "Posterior") gettext("Posterior Distribution") else gettext("Prior Distribution"),
@@ -1151,25 +1151,25 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     dependencies = jaspDeps(base)
   )
 
-  postGrid <- .bsBetaDensityGrid(alpha, beta)
-  df_post <- data.frame(x = postGrid$x, dens = postGrid$density, dist = type)
+  postGrid <- .bsCreateBetaDensityGrid(alpha, beta)
+  posteriorDensity <- data.frame(x = postGrid$x, dens = postGrid$density, dist = type)
   scaleDensities <- postGrid$scale
 
-  df <- df_post
+  df <- posteriorDensity
   if (hasPriorOverlay) {
-    priorGrid <- .bsBetaDensityGrid(alpha_prior, beta_prior)
-    df_prior <- data.frame(x = priorGrid$x, dens = priorGrid$density, dist = "Prior")
+    priorGrid <- .bsCreateBetaDensityGrid(priorAlpha, priorBeta)
+    priorDensity <- data.frame(x = priorGrid$x, dens = priorGrid$density, dist = "Prior")
     scaleDensities <- c(scaleDensities, priorGrid$scale)
-    df <- rbind(df_prior, df_post)
+    df <- rbind(priorDensity, posteriorDensity)
     df$dist <- factor(df$dist, levels = c("Posterior", "Prior"))
   } else {
     df$dist <- factor(df$dist)
   }
 
   xBreaks <- jaspGraphs::getPrettyAxisBreaks(c(0, 1))
-  yScale <- .bsYScale(scaleDensities)
-  aqlLabelX <- .bsThresholdLabelX(aql, "left", 0, 1, min_offset = 0.015)
-  rqlLabelX <- .bsThresholdLabelX(rql, "right", 0, 1, min_offset = 0.015)
+  yScale <- .bsCreateYAxisScale(scaleDensities)
+  aqlLabelX <- .bsComputeThresholdLabelX(aql, "left", 0, 1, minimumOffset = 0.015)
+  rqlLabelX <- .bsComputeThresholdLabelX(rql, "right", 0, 1, minimumOffset = 0.015)
 
   p <- ggplot2::ggplot() +
     ggplot2::geom_vline(xintercept = aql, linetype = "dashed", linewidth = 0.6) +
@@ -1177,7 +1177,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     ggplot2::annotate("text", x = aqlLabelX, y = yScale$label_y, label = "AQL", vjust = 1, hjust = 1, size = 3) +
     ggplot2::annotate("text", x = rqlLabelX, y = yScale$label_y, label = "RQL", vjust = 1, hjust = 0, size = 3) +
     ggplot2::geom_area(
-      data = df_post,
+      data = posteriorDensity,
       ggplot2::aes(x = .data$x, y = .data$dens),
       fill = "#b3b3b3",
       alpha = 0.8,
@@ -1216,8 +1216,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
 }
 
 # Posterior Predictive Distribution Plot
-.bsPPDPlot <- function(container, n, d, N, aql, rql,
-                       alpha_post, beta_post,
+.bsCreatePredictivePlot <- function(container, n, d, N, aql, rql,
+                       posteriorAlpha, posteriorBeta,
                        position, base) {
 
   plot <- createJaspPlot(
@@ -1228,29 +1228,29 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     dependencies = jaspDeps(base)
   )
 
-  ppd_df <- .bsPPDFull(n, d, N, alpha_post, beta_post)
+  predictiveDistribution <- .bsComputePredictiveDistribution(n, d, N, posteriorAlpha, posteriorBeta)
 
-  aql_count <- .bsCountLimit(aql, N)
-  rql_count <- .bsCountLimit(rql, N)
+  acceptableQualityCountLimit <- .bsComputeCountLimit(aql, N)
+  rejectableQualityCountLimit <- .bsComputeCountLimit(rql, N)
 
-  ppd_df$region <- ifelse(ppd_df$d_tot <= aql_count, "Good",
-                   ifelse(ppd_df$d_tot <= rql_count, "Middle", "Bad"))
-  ppd_df$region <- factor(ppd_df$region, levels = c("Good", "Middle", "Bad"))
+  predictiveDistribution$region <- ifelse(predictiveDistribution$d_tot <= acceptableQualityCountLimit, "Good",
+                   ifelse(predictiveDistribution$d_tot <= rejectableQualityCountLimit, "Middle", "Bad"))
+  predictiveDistribution$region <- factor(predictiveDistribution$region, levels = c("Good", "Middle", "Bad"))
 
-  xScale <- .bsPPDXScale(ppd_df$d_tot)
+  xScale <- .bsCreatePredictiveXAxisScale(predictiveDistribution$d_tot)
   xBreaks <- xScale$breaks
-  yScale <- .bsYScale(ppd_df$pmf)
+  yScale <- .bsCreateYAxisScale(predictiveDistribution$pmf)
   visibleThresholds <- do.call(
     rbind,
     Filter(Negate(is.null), list(
-      .bsVisibleThreshold(aql_count + 0.5, "AQL", "left", xScale$limits[1], xScale$limits[2], min_offset = 0.75),
-      .bsVisibleThreshold(rql_count + 0.5, "RQL", "right", xScale$limits[1], xScale$limits[2], min_offset = 0.75)
+      .bsCreateVisibleThreshold(acceptableQualityCountLimit + 0.5, "AQL", "left", xScale$limits[1], xScale$limits[2], minimumOffset = 0.75),
+      .bsCreateVisibleThreshold(rejectableQualityCountLimit + 0.5, "RQL", "right", xScale$limits[1], xScale$limits[2], minimumOffset = 0.75)
     ))
   )
   if (is.null(visibleThresholds))
     visibleThresholds <- data.frame(x = numeric(0), label = character(0), label_x = numeric(0), hjust = numeric(0))
 
-  p <- ggplot2::ggplot(ppd_df, ggplot2::aes(x = .data$d_tot, y = .data$pmf, fill = .data$region)) +
+  p <- ggplot2::ggplot(predictiveDistribution, ggplot2::aes(x = .data$d_tot, y = .data$pmf, fill = .data$region)) +
     ggplot2::geom_col(width = 0.8, color = "black", linewidth = 0.2) +
     ggplot2::geom_vline(
       data = visibleThresholds,
@@ -1283,8 +1283,8 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   container[["ppdPlot"]] <- plot
 }
 
-.bsInferenceDecisionTable <- function(container, n, d, N, aql, rql,
-                                       log_bf, ppd, acceptanceNumber,
+.bsCreateInferenceDecisionTable <- function(container, n, d, N, aql, rql,
+                                       logBayesFactor, ppd, acceptanceNumber,
                                        position, base) {
   
   table <- createJaspTable(
@@ -1297,23 +1297,23 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   table$addColumnInfo(name = "col_2", title = gettext("Value"), type = "string")
   
   # PPD region labels with count thresholds
-  aql_count <- .bsCountLimit(aql, N)
-  rql_count <- .bsCountLimit(rql, N)
+  acceptableQualityCountLimit <- .bsComputeCountLimit(aql, N)
+  rejectableQualityCountLimit <- .bsComputeCountLimit(rql, N)
   
-  ppd_good_label   <- gettextf("PPD Good (\u2264 %1$d defectives in Lot)", aql_count)
-  ppd_middle_label  <- gettextf("PPD Middle (> %1$d & \u2264 %2$d defectives)", aql_count, rql_count)
-  ppd_bad_label     <- gettextf("PPD Bad (> %1$d defectives in Lot)", rql_count)
+  predictiveGoodLabel   <- gettextf("PPD Good (\u2264 %1$d defectives in lot)", acceptableQualityCountLimit)
+  predictiveMiddleLabel  <- gettextf("PPD Middle (> %1$d & \u2264 %2$d defectives)", acceptableQualityCountLimit, rejectableQualityCountLimit)
+  predictiveBadLabel     <- gettextf("PPD Bad (> %1$d defectives in lot)", rejectableQualityCountLimit)
   
   table[["col_1"]] <- c(
     gettext("Sample Size (n)"),
     gettext("Defectives (d)"),
-    gettext("Acceptance number (c)"),
+    gettext("Acceptance Number (c)"),
     gettext("AQL"),
     gettext("RQL"),
     gettext("Bayes Factor"),
-    ppd_good_label,
-    ppd_middle_label,
-    ppd_bad_label
+    predictiveGoodLabel,
+    predictiveMiddleLabel,
+    predictiveBadLabel
   )
   
   table[["col_2"]] <- c(
@@ -1322,7 +1322,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
     if (is.na(acceptanceNumber)) gettext("Not available") else as.character(acceptanceNumber),
     .bsFormatQuality(aql),
     .bsFormatQuality(rql),
-    .bsFormatBF(log_bf, digits = 3L),
+    .bsFormatBayesFactor(logBayesFactor, digits = 3L),
     sprintf("%.3f", ppd$good),
     sprintf("%.3f", ppd$middle),
     sprintf("%.3f", ppd$bad)
@@ -1333,7 +1333,7 @@ BayesianSampling <- function(jaspResults, dataset = NULL, options, ...) {
   container[["inferenceDecisionTable"]] <- table
 }
 
-.bsProcedure <- function(jaspResults, options, position) {
+.bsCreateProcedure <- function(jaspResults, options, position) {
 
   # Retrieve values for dynamic text
   aql <- options$planningAcceptableQualityLevel * 100

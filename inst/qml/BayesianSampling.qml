@@ -23,7 +23,7 @@ Form
 		"on the lot proportion defective. The procedure text describes the hypotheses and workflow. Planning " +
 		"finds candidate sampling plans; inference updates the selected prior using the observed sample and " +
 		"predicts defects in the lot.")
-	infoBottom: "## " + qsTr("Numerical details") + "\n\n" +
+	infoBottom: "## " + qsTr("Numerical Details") + "\n\n" +
 		qsTr("Bayes factors are calculated from log probabilities without clipping the hypothesis-region " +
 		"probabilities. Planning, acceptance numbers and evidence labels use these log-scale values. " +
 		"Differences within a small floating-point round-off allowance are treated as ties, so a numerical " +
@@ -59,12 +59,13 @@ Form
 
 		Group
 		{
-			title: qsTr("Quality Constraints")
+			title: qsTr("Quality Levels")
 
 			DoubleField {
 				name: "planningAcceptableQualityLevel"
-				label: qsTr("Acceptable Quality Level (AQL)")
-				info: qsTr("For the default unimodal two-hypothesis impartial prior, AQL sets the mode (peak) unless a custom mode " +
+				label: qsTr("Acceptable quality level (AQL)")
+				info: qsTr("Acceptable quality level (AQL), expressed as a proportion defective between 0 and 1.") + "\n\n" +
+					qsTr("For the default unimodal two-hypothesis impartial prior, AQL sets the mode (peak) unless a custom mode " +
 					"is specified. The prior assigns 50% probability below RQL and 50% above it. For a U-shaped impartial " +
 					"prior, AQL instead sets the interior minimum unless a custom minimum is specified. In the " +
 					"three-hypothesis workflow, AQL separates the Good and Middle regions.")
@@ -77,9 +78,11 @@ Form
 
 			DoubleField {
 				name: "planningRejectableQualityLevel"
-				label: qsTr("Rejectable Quality Level (RQL)")
+				label: qsTr("Rejectable quality level (RQL or LTPD)")
 				info: qsTr("Proportion-defective threshold for unacceptable quality and the main threshold used in " +
-					"two-hypothesis planning and inference.")
+					"two-hypothesis planning and inference.") + "\n\n" +
+					qsTr("Also called the lot tolerance percent defective (LTPD). Enter a proportion between 0 and 1 " +
+						"(for example, 0.10 means 10%).")
 				defaultValue: 0.15
 				min: 0
 				max: 1
@@ -90,125 +93,225 @@ Form
 
 		RadioButtonGroup
 		{
-			id: priorPlanGroup
-			title: qsTr("Prior Distribution (Beta)")
-			info: qsTr("Select a Beta prior for the lot proportion defective. The selected prior is used for both planning " +
+			id:		priorPlanGroup
+			title:	qsTr("Beta Prior")
+			info:	qsTr("Select a Beta prior for the lot proportion defective. The selected prior is used for both planning " +
 				"and inference.")
-			name: "planningPriorDistribution"
+			name:	"planningPriorDistribution"
 
-			RadioButton {
-				value: "impartial"
-				label: qsTr("Impartial (Around the RQL)")
-				info: qsTr("Assigns 50% prior probability below RQL and 50% above it. Choose a unimodal prior with an interior " +
+			RadioButton
+			{
+				value:		"impartial"
+				label:		qsTr("Impartial (two-region)")
+				info:		qsTr("Assigns 50% prior probability below RQL and 50% above it. Choose a unimodal prior with an interior " +
 					"peak or a U-shaped prior with an interior minimum between the endpoint peaks. The location defaults " +
 					"to AQL. Incompatible combinations produce an error; the analysis does not automatically change the " +
 					"shape, location or probability split.")
-				checked: true
+				checked:	true
 
-				DropDown {
-					id: impartialShape
-					name: "planningPriorImpartialShape"
-					label: qsTr("Shape")
-					info: qsTr("Both shapes assign half of the prior probability below RQL. For Unimodal (the default), the location " +
-						"is the peak and RQL must lie strictly between that mode and 0.5. For U-shaped, the location is the " +
-						"interior minimum and the minimum and RQL must lie on opposite sides of 0.5. Both the location and " +
-						"RQL must be strictly between 0 and 1.") + "\n\n" +
-						qsTr("A location and RQL both equal to 0.5 leave infinitely many priors of either shape possible. Choose " +
-						"Custom to specify the desired parameters.")
-					indexDefaultValue: 0
-					values: [
-						{ label: qsTr("Unimodal"), value: "unimodal" },
-						{ label: qsTr("U-shaped"), value: "u_shaped" }
-					]
-				}
+				Group
+				{
+					id:					priorTwoRegionSettings
+					visible:			priorPlanGroup.value === "impartial"
+					enabled:			visible
 
-				CheckBox {
-					name: "planningPriorImpartialCustomLocation"
-					label: impartialShape.value === "u_shaped" ? qsTr("Custom prior minimum") : qsTr("Custom prior mode")
-					info: qsTr("When unchecked, AQL is used as the location. Changing shape retains the location; incompatible combinations show an error.")
-					checked: false
+					RadioButtonGroup
+					{
+						id:			impartialShape
+						name:		"planningPriorImpartialShape"
+						title:		qsTr("Prior Shape")
+						infoLabel:	qsTr("Two-region prior shape")
+						info:		qsTr("Both shapes assign half of the prior probability below RQL. For Unimodal (the default), the location " +
+							"is the peak and RQL must lie strictly between that mode and 0.5. For U-shaped, the location is the " +
+							"interior minimum and the minimum and RQL must lie on opposite sides of 0.5. Both the location and " +
+							"RQL must be strictly between 0 and 1.") + "\n\n" +
+							qsTr("A location and RQL both equal to 0.5 leave infinitely many priors of either shape possible. Choose " +
+							"Custom to specify the desired parameters.")
 
-					DoubleField {
-						name: "planningPriorImpartialLocation"
-						label: impartialShape.value === "u_shaped" ? qsTr("Minimum") : qsTr("Mode")
-						info: qsTr("Location of the interior peak for Unimodal or the interior minimum for U-shaped, between 0 and 1. " +
-							"Switching shape retains this value.")
-						defaultValue: 0.05
-						min: 0
-						max: 1
-						inclusive: JASP.None
-						decimals: 6
+						RadioButton
+						{
+							value:		"unimodal"
+							label:		qsTr("Unimodal")
+							checked:	true
+						}
+						RadioButton
+						{
+							value:	"uShaped"
+							label:	qsTr("U-shaped")
+						}
+					}
+
+					CheckBox
+					{
+						id:					impartialCustomLocation
+						name:				"planningPriorImpartialCustomLocation"
+						label:				impartialShape.value === "uShaped" ? qsTr("Custom minimum") : qsTr("Custom mode")
+						infoLabel:			qsTr("Two-region custom location")
+						info:				qsTr("When unchecked, AQL is used as the location. Changing shape retains the location; incompatible combinations show an error.")
+						checked:			false
+						childrenOnSameRow:	true
+
+						DoubleField
+						{
+							name:			"planningPriorImpartialLocation"
+							label:			""
+							infoLabel:		qsTr("Prior location")
+							afterLabel:		impartialCustomLocation.checked ? "" : qsTr("(default: AQL)")
+							info:			qsTr("Location of the interior peak for Unimodal or the interior minimum for U-shaped, between 0 and 1. " +
+								"Switching shape retains this value.")
+							defaultValue:	0.05
+							min:			0
+							max:			1
+							inclusive:		JASP.None
+							decimals:		6
+						}
 					}
 				}
 			}
 
-			RadioButton {
-				value: "uniform"
-				label: qsTr("Uniform")
-				info: qsTr("Uses a Beta(1, 1) prior.")
+			RadioButton
+			{
+				value:	"impartialThreeRegion"
+				label:	qsTr("Impartial (three-region)")
+				info:	qsTr("Assigns one third of the prior probability to each of Good (below AQL), Middle (between AQL and " +
+					"RQL), and Bad (above RQL). The limits must satisfy 0 < AQL < RQL < 1.")
+
+				Group
+				{
+					id:					priorThreeRegionSettings
+					visible:			priorPlanGroup.value === "impartialThreeRegion"
+					enabled:			visible
+
+					RadioButtonGroup
+					{
+						id:						priorThreeRegionShapeConstraint
+						name:					"planningPriorThreeRegionShapeConstraint"
+						title:					qsTr("Shape Constraint (Optional)")
+						infoLabel:				qsTr("Three-region shape constraint")
+						info:					qsTr("Leave both choices unchecked to allow any Beta shape (the default). Select at most one constraint: " +
+							"exclude U-shapes (alpha >= 1 or beta >= 1), or require both parameters to be " +
+							"at least 1. The equal-thirds prior must satisfy the selected constraint. Incompatible quality limits " +
+							"and shape constraints produce an error. Change the limits or constraint; the probability split is " +
+							"not changed.")
+
+						// Preserve the saved string option while allowing both visible choices to be unchecked.
+						function synchronizeChoices()
+						{
+							threeRegionExcludeUShaped.checked = value === "nonUShaped"
+							threeRegionBothAtLeastOne.checked = value === "bothAtLeastOne"
+						}
+
+						onValueChanged:			synchronizeChoices()
+						onInitializedChanged:	if (initialized) synchronizeChoices()
+
+						RadioButton
+						{
+							id:			priorThreeRegionNone
+							value:		"none"
+							visible:	false
+							checked:	true
+						}
+						RadioButton
+						{
+							id:			priorThreeRegionNonUShaped
+							value:		"nonUShaped"
+							visible:	false
+						}
+						RadioButton
+						{
+							id:			priorThreeRegionBothAtLeastOne
+							value:		"bothAtLeastOne"
+							visible:	false
+						}
+
+						CheckBox
+						{
+							id:			threeRegionExcludeUShaped
+							label:		qsTr("Exclude U-shaped")
+							info:		qsTr("Requires at least one of alpha or beta to be at least 1, allowing monotone priors but excluding U-shaped priors.")
+							isBound:	false
+							onCheckedChanged:
+							{
+								if (priorThreeRegionShapeConstraint.initialized)
+								{
+									if (checked && priorThreeRegionShapeConstraint.value !== "nonUShaped")
+										priorThreeRegionNonUShaped.click()
+									else if (!checked && priorThreeRegionShapeConstraint.value === "nonUShaped")
+										priorThreeRegionNone.click()
+								}
+							}
+						}
+						CheckBox
+						{
+							id:			threeRegionBothAtLeastOne
+							label:		qsTr("\u03B1 \u2265 1 and \u03B2 \u2265 1")
+							info:		qsTr("Requires both alpha and beta to be at least 1, also excluding monotone priors that have either parameter below 1.")
+							isBound:	false
+							onCheckedChanged:
+							{
+								if (priorThreeRegionShapeConstraint.initialized)
+								{
+									if (checked && priorThreeRegionShapeConstraint.value !== "bothAtLeastOne")
+										priorThreeRegionBothAtLeastOne.click()
+									else if (!checked && priorThreeRegionShapeConstraint.value === "bothAtLeastOne")
+										priorThreeRegionNone.click()
+								}
+							}
+						}
+					}
+				}
 			}
 
 			RadioButton
 			{
-				value: "custom"
-				label: qsTr("Custom")
-				info: qsTr("Specify the two positive shape parameters of the Beta prior.")
-
-				DoubleField {
-					name: "planningPriorAlpha"
-					label: qsTr("\u03B1")
-					info: qsTr("First shape parameter (alpha) of the custom Beta prior.")
-					defaultValue: 1
-					min: 0
-					max: 10000
-				}
-
-				DoubleField {
-					name: "planningPriorBeta"
-					label: qsTr("\u03B2")
-					info: qsTr("Second shape parameter (beta) of the custom Beta prior.")
-					defaultValue: 1
-					min: 0
-					max: 10000
-				}
-
+				value:	"uniform"
+				label:	qsTr("Uniform")
+				info:	qsTr("Uses a Beta(1, 1) prior.")
 			}
-			RadioButton {
-				value: "impartial_three"
-				label: qsTr("Impartial (Three-region)")
-				info: qsTr("Assigns one third of the prior probability to each of Good (below AQL), Middle (between AQL and " +
-					"RQL), and Bad (above RQL). The limits must satisfy 0 < AQL < RQL < 1.")
-			}
-		}
 
-		Group
-		{
-			title: qsTr("Impartial (Three-region) Options")
-			enabled: priorPlanGroup.value === "impartial_three"
-
-			DropDown
+			RadioButton
 			{
-				name: "planningPriorThreeRegionShapeConstraint"
-				label: qsTr("Shape constraint")
-				info: qsTr("Allow any Beta shape, exclude U-shapes (alpha >= 1 or beta >= 1), or require both parameters to be " +
-					"at least 1. The equal-thirds prior must satisfy the selected constraint. Incompatible quality limits " +
-					"and shape constraints produce an error. Change the limits or constraint; the probability split is " +
-					"not changed.")
-				indexDefaultValue: 0
+				value:	"custom"
+				label:	qsTr("Custom")
+				info:	qsTr("Specify the two positive shape parameters of the Beta prior.")
 
-				values: [
-					{ label: qsTr("Avoid U-shape (\u03B1 \u2265 1 or \u03B2 \u2265 1)"), value: "no_U" },
-					{ label: qsTr("Both \u03B1 \u2265 1 and \u03B2 \u2265 1"),         value: "both_ge_1" },
-					{ label: qsTr("None (allow U-shape)"),                             value: "none" }
-				]
+				Group
+				{
+					id:					priorCustomSettings
+					visible:			priorPlanGroup.value === "custom"
+					enabled:			visible
+					columns:			2
+
+					DoubleField
+					{
+						name:			"planningPriorAlpha"
+						label:			qsTr("\u03B1")
+						info:			qsTr("First shape parameter (alpha) of the custom Beta prior.")
+						defaultValue:	1
+						min:			0
+						max:			10000
+					}
+
+					DoubleField
+					{
+						name:			"planningPriorBeta"
+						label:			qsTr("\u03B2")
+						info:			qsTr("Second shape parameter (beta) of the custom Beta prior.")
+						defaultValue:	1
+						min:			0
+						max:			10000
+					}
+				}
 			}
 		}
 
 		Group
 		{
+			title: qsTr("Planning Criteria")
+
 			IntegerField {
 				name: "planningMaximumSampleSize"
-				label: qsTr("(Max) Sample size (n)")
+				label: qsTr("(Max) sample size (n)")
 				info: qsTr("Maximum sample size searched when finding candidate sampling plans.")
 				defaultValue: 40
 				min: 1
@@ -233,8 +336,8 @@ Form
 			title: qsTr("Output Options")
 			CheckBox
 			{
-				name: "planningPlansTable"
-				label: qsTr("Plans table")
+				name: "planningPlanTable"
+				label: qsTr("Plan table")
 				info: qsTr("Show candidate sampling plans meeting the selected minimum Bayes-factor target within the maximum " +
 					"sample size.")
 			}
@@ -273,8 +376,8 @@ Form
 			CheckBox
 			{
 				id: inferPosterior
-				name: "inferenceUseData"
-				label: qsTr("Use data to create posterior distribution")
+				name: "inferencePosterior"
+				label: qsTr("Posterior distribution")
 				info: qsTr("Update the selected Beta prior using the sample size n and observed defectives d. Counts must " +
 					"satisfy 0 <= d <= n <= N. The input fields retain inconsistent counts so that the analysis can " +
 					"explain the problem. If d exceeds n or n exceeds N, correct whichever entry was mistaken; dependent " +

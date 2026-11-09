@@ -1,5 +1,5 @@
 test_that("decimal quality limits retain mathematically integer count boundaries", {
-  limit <- getFromNamespace(".asSSM_countLimit", "jaspAcceptanceSampling")
+  limit <- getFromNamespace(".asSSM_computeCountLimit", "jaspAcceptanceSampling")
   # Independent integer arithmetic identifies exact boundaries for decimal inputs.
   sizes <- seq_len(2000L)
   actual <- expected <- numeric()
@@ -23,7 +23,7 @@ test_that("decimal quality limits retain mathematically integer count boundaries
 })
 
 test_that("fractional and genuinely nearby quality limits are not rounded", {
-  limit <- getFromNamespace(".asSSM_countLimit", "jaspAcceptanceSampling")
+  limit <- getFromNamespace(".asSSM_computeCountLimit", "jaspAcceptanceSampling")
   for (pair in list(c(.025, 30), c(.15, 7), c(1e-300, 100), c(.Machine$double.xmin, 1)))
     expect_identical(limit(pair[1L], pair[2L]), pair[1L] * pair[2L])
   for (pair in list(c(29, 100), c(7, 100), c(622770244, 2147483600))) {
@@ -41,19 +41,19 @@ test_that("fractional and genuinely nearby quality limits are not rounded", {
 test_that("table decisions and plot limits share strict decimal count boundaries", {
   ns <- asNamespace("jaspAcceptanceSampling")
   fixture <- new.env(parent = emptyenv())
-  fit_fixture <- function(jaspResults, dataset, options) {
+  fitFixture <- function(jaspResults, dataset, options) {
     error <- get(".asSSM_validateInputs", ns)(dataset, options)
     if (!is.null(error)) {
       get(".asSSM_setAnalysisError", ns)(jaspResults, error)
       return()
     }
     state <- jaspBase::createJaspState()
-    state$dependOn(get(".asSSM_fitDependencies", ns)())
+    state$dependOn(get(".asSSM_getFitDependencies", ns)())
     jaspResults[["fit"]] <- state
     state$object <- list(samples = list(y_pred = fixture$draws))
   }
   testthat::local_mocked_bindings(
-    .asSSM_fitModel = fit_fixture,
+    .asSSM_fitModel = fitFixture,
     .asSSM_reportDiagnostics = function(...) invisible(NULL),
     .asSSM_getStanModel = function(...) stop("Count-limit fixtures must not load Stan."),
     .package = "jaspAcceptanceSampling")
@@ -63,10 +63,10 @@ test_that("table decisions and plot limits share strict decimal count boundaries
   # Specify Scale for the numeric fixture columns.
   options[names(assignments)] <- lapply(assignments, function(columns)
     if (length(columns)) list(value = columns, types = as.list(rep("scale", length(columns)))) else columns)
-  for (name in c("plotsStateTimeSeries", "plotsLatestDefectRate", "plotsPredictorCoefficients",
-                 "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotLatestDefectRate", "plotPredictorCoefficient",
+                 "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
-  options$plotsPosteriorPredictive <- TRUE
+  options$plotPosteriorPredictive <- TRUE
   options$settingsAcceptanceThreshold <- .10
   options$settingsRejectionThreshold <- .05
   cases <- list(

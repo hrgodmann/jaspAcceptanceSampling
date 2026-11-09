@@ -13,13 +13,13 @@ Accept/Reject Lots
  - *Sample mean*: mean of the sample values.
  - *Sample standard deviation*: Standard deviation of the sample values.
 - **k**: the value used to compare the sample mean with the specification limits.
-- **Specification limits**: the lower and the upper specification limits.
- - *Lower Specification Limit (LSL)*: the lower specification limit.
- - *Upper Specification Limit (USL)*: the upper specification limit.
-- **Standard Deviation (Historical) known**: whether or not the historical standard deviation is known.
-- **Quality constraints**: user-specified constraints associated with AQL and RQL.
- - *Acceptable Quality Level (AQL)*: the smallest proportion of non-conforming items that makes the lot definitely acceptable.
- - *Rejectable Quality Level (RQL / LTPD)*: the proportion of non-conforming items in the lot that is unacceptable to the consumer.
+- **Specification Limits**: the lower and the upper specification limits.
+ - *Lower specification limit (LSL)*: the lower specification limit.
+ - *Upper specification limit (USL)*: the upper specification limit.
+- **Standard deviation (historical)**: whether or not the historical standard deviation is known.
+- **Quality Constraints**: user-specified constraints associated with AQL and RQL.
+ - *Acceptable quality level (AQL)*: the smallest proportion of non-conforming items that makes the lot definitely acceptable.
+ - *Rejectable quality level (RQL / LTPD)*: the proportion of non-conforming items in the lot that is unacceptable to the consumer.
 
 ## Output 
 -------

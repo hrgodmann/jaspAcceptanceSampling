@@ -7,12 +7,12 @@ if (!mode %in% c("--write", "--check") || length(args) > 2L)
        call. = FALSE)
 root <- normalizePath(if (length(args) == 2L) args[2] else ".", mustWork = TRUE)
 
-update_stan <- function() {
+updateStan <- function() {
   stage <- tempfile("stan-generation-")
   dir.create(stage)
-  original_dir <- getwd()
+  originalDirectory <- getwd()
   on.exit({
-    setwd(original_dir)
+    setwd(originalDirectory)
     unlink(stage, recursive = TRUE)
   }, add = TRUE)
   setwd(root)
@@ -49,9 +49,9 @@ update_stan <- function() {
   if (!all(file.exists(file.path(stage, required))))
     stop("The generator did not produce all expected native files.", call. = FALSE)
   # The R wrapper file is absent when only Rcpp modules are exported.
-  read_code <- function(path) if (file.exists(path)) readLines(path, warn = FALSE) else NULL
+  readCode <- function(path) if (file.exists(path)) readLines(path, warn = FALSE) else NULL
   changed <- generated[!vapply(generated, function(path)
-    identical(read_code(file.path(stage, path)), read_code(path)), logical(1))]
+    identical(readCode(file.path(stage, path)), readCode(path)), logical(1))]
   if (!length(changed)) {
     message("Generated Stan files are current.")
     return(invisible(NULL))
@@ -74,4 +74,4 @@ update_stan <- function() {
   message("Updated: ", paste(changed, collapse = ", "))
 }
 
-update_stan()
+updateStan()

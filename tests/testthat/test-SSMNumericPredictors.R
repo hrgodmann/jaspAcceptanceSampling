@@ -1,18 +1,18 @@
-.ssm_numeric_api <- function() {
+.ssmNumericApi <- function() {
   list(
-    names = getFromNamespace(".asSSM_predictorNames", "jaspAcceptanceSampling"),
-    design = getFromNamespace(".asSSM_predictorDesign", "jaspAcceptanceSampling"),
+    names = getFromNamespace(".asSSM_getPredictorNames", "jaspAcceptanceSampling"),
+    design = getFromNamespace(".asSSM_createPredictorDesign", "jaspAcceptanceSampling"),
     validate = getFromNamespace(".asSSM_validateInputs", "jaspAcceptanceSampling"),
     read = getFromNamespace(".asSSM_readData", "jaspAcceptanceSampling")
   )
 }
 
-.ssm_numeric_options <- function(predictors = character()) {
+.ssmNumericOptions <- function(predictors = character()) {
   list(defectCount = "count", sampleSize = "n", lotSize = "s", lotNumber = "lot",
        covariates = predictors)
 }
 
-.ssm_numeric_data <- function() {
+.ssmNumericData <- function() {
   data.frame(
     count = c(1, 0, 2, 1, 0, 3, 1, 2), n = rep(20, 8), s = rep(100, 8),
     lot = 1:8,
@@ -23,20 +23,20 @@
 }
 
 test_that("numeric predictor assignments preserve old scalar and new vector options", {
-  api <- .ssm_numeric_api()
+  api <- .ssmNumericApi()
   for (empty in list("", character(), NULL)) {
-    expect_identical(api$names(.ssm_numeric_options(empty)), character())
+    expect_identical(api$names(.ssmNumericOptions(empty)), character())
   }
-  expect_identical(api$names(.ssm_numeric_options("x1")), "x1")
-  expect_identical(api$names(.ssm_numeric_options(c("x3", "x1", "x2"))),
+  expect_identical(api$names(.ssmNumericOptions("x1")), "x1")
+  expect_identical(api$names(.ssmNumericOptions(c("x3", "x1", "x2"))),
                    c("x3", "x1", "x2"))
 })
 
 test_that("numeric design preserves the original one-predictor standardization and dimensions", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()
   before <- data
-  design <- api$design(data, .ssm_numeric_options("x1"))
+  design <- api$design(data, .ssmNumericOptions("x1"))
   expect_identical(design$names, "x1")
   expect_identical(dim(design$X), c(nrow(data), 1L))
   expect_equal(unname(design$center), mean(data$x1), tolerance = 1e-14)
@@ -44,7 +44,7 @@ test_that("numeric design preserves the original one-predictor standardization a
   expect_equal(as.numeric(design$X), as.numeric(scale(data$x1)), tolerance = 1e-14)
   expect_identical(data, before)
 
-  none <- api$design(data, .ssm_numeric_options())
+  none <- api$design(data, .ssmNumericOptions())
   expect_identical(none$names, character())
   expect_length(none$center, 0L)
   expect_length(none$scale, 0L)
@@ -52,10 +52,10 @@ test_that("numeric design preserves the original one-predictor standardization a
 })
 
 test_that("two and three numerical predictors are scaled separately in assignment order", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()
   for (selected in list(c("x1", "x2"), c("x3", "x1", "x2"))) {
-    options <- .ssm_numeric_options(selected)
+    options <- .ssmNumericOptions(selected)
     expect_null(api$validate(data, options))
     design <- api$design(data, options)
     expect_identical(design$names, selected)
@@ -70,8 +70,8 @@ test_that("two and three numerical predictors are scaled separately in assignmen
       expect_equal(stats::sd(design$X[, j]), 1, tolerance = 1e-14)
     }
   }
-  ordered <- api$design(data, .ssm_numeric_options(c("x1", "x2", "x3")))
-  reordered <- api$design(data, .ssm_numeric_options(c("x3", "x1", "x2")))
+  ordered <- api$design(data, .ssmNumericOptions(c("x1", "x2", "x3")))
+  reordered <- api$design(data, .ssmNumericOptions(c("x3", "x1", "x2")))
   expect_equal(as.numeric(reordered$X), as.numeric(ordered$X[, c(3, 1, 2), drop = FALSE]),
                tolerance = 1e-14)
   beta <- c(0.8, -0.4, 0.2)
@@ -80,11 +80,11 @@ test_that("two and three numerical predictors are scaled separately in assignmen
 })
 
 test_that("sorting keeps all predictor values with their lot and never drops a row", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()[c(8, 3, 6, 2, 5, 1, 7, 4), ]
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()[c(8, 3, 6, 2, 5, 1, 7, 4), ]
   data$row_id <- letters[1:nrow(data)]
   before <- data
-  options <- .ssm_numeric_options(c("x1", "x2", "x3"))
+  options <- .ssmNumericOptions(c("x1", "x2", "x3"))
   sorted <- api$read(data, options)
   expect_identical(sorted, data[order(data$lot), , drop = FALSE])
   expect_equal(nrow(sorted), nrow(data))
@@ -96,15 +96,15 @@ test_that("sorting keeps all predictor values with their lot and never drops a r
 })
 
 test_that("every selected predictor is checked for missing columns and numeric finite values", {
-  api <- .ssm_numeric_api()
-  options <- .ssm_numeric_options(c("x1", "x2", "x3"))
+  api <- .ssmNumericApi()
+  options <- .ssmNumericOptions(c("x1", "x2", "x3"))
   for (name in options$covariates) {
-    missing <- .ssm_numeric_data()
+    missing <- .ssmNumericData()
     missing[[name]] <- NULL
     expect_match(api$validate(missing, options), "missing", ignore.case = TRUE)
 
     for (value in c(NA_real_, NaN, Inf, -Inf)) {
-      invalid <- .ssm_numeric_data()
+      invalid <- .ssmNumericData()
       invalid[[name]][4] <- value
       before <- invalid
       expect_match(api$validate(invalid, options), "missing|finite", ignore.case = TRUE)
@@ -114,52 +114,52 @@ test_that("every selected predictor is checked for missing columns and numeric f
     invalidColumns <- list(as.character(1:8), factor(rep(c("a", "b"), 4)),
                            rep(c(TRUE, FALSE), 4), as.list(1:8), as.complex(1:8))
     for (values in invalidColumns) {
-      invalid <- .ssm_numeric_data()
+      invalid <- .ssmNumericData()
       invalid[[name]] <- values
       expect_match(api$validate(invalid, options), "numeric|number|real", ignore.case = TRUE)
     }
-    invalid <- .ssm_numeric_data()
+    invalid <- .ssmNumericData()
     invalid[[name]] <- rep(5, nrow(invalid))
     expect_match(api$validate(invalid, options), "vary|variation|constant", ignore.case = TRUE)
   }
-  inactive <- .ssm_numeric_data()
+  inactive <- .ssmNumericData()
   inactive$x3 <- factor(rep(c("a", "b"), 4))
-  expect_null(api$validate(inactive, .ssm_numeric_options(c("x1", "x2"))))
+  expect_null(api$validate(inactive, .ssmNumericOptions(c("x1", "x2"))))
 })
 
 test_that("duplicate and exactly redundant numeric predictors are rejected before fitting", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()
-  expect_match(api$validate(data, .ssm_numeric_options(c("x1", "x1"))),
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()
+  expect_match(api$validate(data, .ssmNumericOptions(c("x1", "x1"))),
                "duplicate|once|repeated", ignore.case = TRUE)
 
   proportional <- data
   proportional$x2 <- 3 * proportional$x1 + 12
-  expect_match(api$validate(proportional, .ssm_numeric_options(c("x1", "x2"))),
+  expect_match(api$validate(proportional, .ssmNumericOptions(c("x1", "x2"))),
                "redundan|linear|collinear|rank", ignore.case = TRUE)
   combination <- data
   combination$x3 <- combination$x1 + 2 * combination$x2 + 9
-  expect_match(api$validate(combination, .ssm_numeric_options(c("x1", "x2", "x3"))),
+  expect_match(api$validate(combination, .ssmNumericOptions(c("x1", "x2", "x3"))),
                "redundan|linear|collinear|rank", ignore.case = TRUE)
-  expect_null(api$validate(data, .ssm_numeric_options(c("x1", "x2", "x3"))))
+  expect_null(api$validate(data, .ssmNumericOptions(c("x1", "x2", "x3"))))
 })
 
 test_that("high correlation and nonlinear transformations alone do not block predictors", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()
   data$x1 <- seq_len(nrow(data))
   data$x2 <- 2 * data$x1 + c(0.01, -0.01, 0, 0.02, -0.02, 0, 0.01, -0.01)
   expect_gt(stats::cor(data$x1, data$x2), 0.999)
-  expect_null(api$validate(data, .ssm_numeric_options(c("x1", "x2"))))
+  expect_null(api$validate(data, .ssmNumericOptions(c("x1", "x2"))))
   data$x2 <- data$x1^2
-  expect_null(api$validate(data, .ssm_numeric_options(c("x1", "x2"))))
+  expect_null(api$validate(data, .ssmNumericOptions(c("x1", "x2"))))
 })
 
 test_that("redundant predictors produce a renderable actionable error before loading Stan", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- .ssm_numeric_options(c("x1", "x2"))
+  assignments <- .ssmNumericOptions(c("x1", "x2"))
   options[names(assignments)] <- assignments
-  data <- .ssm_numeric_data()
+  data <- .ssmNumericData()
   data$x2 <- 2 * data$x1 + 10
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
@@ -187,12 +187,12 @@ test_that("redundant predictors produce a renderable actionable error before loa
 })
 
 test_that("sample and lot boundaries remain valid with several predictors", {
-  api <- .ssm_numeric_api()
-  data <- .ssm_numeric_data()
+  api <- .ssmNumericApi()
+  data <- .ssmNumericData()
   data$count[1:4] <- c(0, 0, 20, 0)
   data$n[1:4] <- c(0, 100, 20, 0)
   data$s[4] <- 0
-  options <- .ssm_numeric_options(c("x1", "x2"))
+  options <- .ssmNumericOptions(c("x1", "x2"))
   expect_null(api$validate(data, options))
   expect_equal(nrow(api$design(data, options)$X), nrow(data))
 
@@ -204,36 +204,36 @@ test_that("sample and lot boundaries remain valid with several predictors", {
   invalid$lot[8] <- invalid$lot[1]
   expect_match(api$validate(invalid, options), "unique|duplicate|one row|only once",
                ignore.case = TRUE)
-  expect_null(api$validate(data[1, , drop = FALSE], .ssm_numeric_options()))
-  expect_match(api$validate(data[1, , drop = FALSE], .ssm_numeric_options("x1")),
+  expect_null(api$validate(data[1, , drop = FALSE], .ssmNumericOptions()))
+  expect_match(api$validate(data[1, , drop = FALSE], .ssmNumericOptions("x1")),
                "two|multiple|more than one", ignore.case = TRUE)
 })
 
 test_that("two numeric predictors reach the coefficient table, density facets and predictive output", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- .ssm_numeric_options(c("x1", "x2"))
+  assignments <- .ssmNumericOptions(c("x1", "x2"))
   for (name in names(assignments)) options[[name]] <- assignments[[name]]
-  options$plotsStateTimeSeries <- FALSE
-  options$plotsPosteriorPredictive <- TRUE
-  options$plotsLatestDefectRate <- FALSE
-  options$plotsPredictorCoefficients <- TRUE
-  options$mcmcDiagnosticsOverviewTable <- TRUE
-  options$mcmcDiagnosticsOverviewTheta <- FALSE
-  options$mcmcDiagnosticsOverviewSigma <- FALSE
-  options$mcmcDiagnosticsOverviewPrediction <- FALSE
-  options$mcmcDiagnosticsOverviewBeta <- TRUE
-  options$mcmcDiagnosticsPrint <- FALSE
+  options$plotStateTimeSeries <- FALSE
+  options$plotPosteriorPredictive <- TRUE
+  options$plotLatestDefectRate <- FALSE
+  options$plotPredictorCoefficient <- TRUE
+  options$mcmcDiagnosticOverviewTable <- TRUE
+  options$mcmcDiagnosticOverviewTheta <- FALSE
+  options$mcmcDiagnosticOverviewSigma <- FALSE
+  options$mcmcDiagnosticOverviewPrediction <- FALSE
+  options$mcmcDiagnosticOverviewBeta <- TRUE
+  options$mcmcDiagnosticReport <- FALSE
 
   # This short chain tests output wiring, not convergence or parameter recovery.
   options$advancedMcmcBurnin <- 100
   options$advancedMcmcSamples <- 100
   options$advancedMcmcChains <- 1
-  options$advancedMcmcThin <- 1
+  options$advancedMcmcThinning <- 1
   options$advancedMcmcSeed <- 42
   options$advancedMcmcAdaptDelta <- 0.9
   options$advancedMcmcMaxTreeDepth <- 8
 
-  data <- .ssm_numeric_data()
+  data <- .ssmNumericData()
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
   utils::write.csv(data, csv, row.names = FALSE)
@@ -270,10 +270,10 @@ test_that("two numeric predictors reach the coefficient table, density facets an
 
 test_that("valid inputs silently replace old errors and a loader failure shows a new error", {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- .ssm_numeric_options(c("x1", "x2"))
+  assignments <- .ssmNumericOptions(c("x1", "x2"))
   for (name in names(assignments)) options[[name]] <- assignments[[name]]
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "plotPredictorCoefficient", "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
 
   captured <- NULL
@@ -291,7 +291,7 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
                                  .package = "jaspAcceptanceSampling")
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
-  utils::write.csv(.ssm_numeric_data(), csv, row.names = FALSE)
+  utils::write.csv(.ssmNumericData(), csv, row.names = FALSE)
   result <- jaspTools::runAnalysis("BayesianSSMforAS", csv, options, view = FALSE)
 
   expect_true(captured$present)
@@ -311,7 +311,7 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
                      names(result$results)))
 })
 
-.ssm_coefficient_fixture <- function() {
+.ssmCoefficientFixture <- function() {
   fixture <- new.env(parent = emptyenv())
   fixture$generations <- 0L
   fixture$labels <- c(x1 = "Temperature \u00b0C", x2 = "Pressure level", x3 = "Flow / volume")
@@ -331,12 +331,12 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
     }
     if (is.null(jaspResults[["fit"]])) {
       state <- jaspBase::createJaspState()
-      state$dependOn(get(".asSSM_fitDependencies", ns)())
+      state$dependOn(get(".asSSM_getFitDependencies", ns)())
       jaspResults[["fit"]] <- state
     }
     if (!is.null(jaspResults[["fit"]]$object)) return()
     fixture$generations <- fixture$generations + 1L
-    design <- get(".asSSM_predictorDesign", ns)(dataset, options)
+    design <- get(".asSSM_createPredictorDesign", ns)(dataset, options)
     fixtureNames <- jaspSyntax::decodeColumnNames(design$names)
     design$labels <- unname(fixture$labels[fixtureNames])
     beta <- fixture$draws[, fixtureNames, drop = FALSE]
@@ -351,17 +351,17 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
   fixture
 }
 
-.ssm_coefficient_options <- function(predictors) {
+.ssmCoefficientOptions <- function(predictors) {
   options <- jaspTools::analysisOptions("BayesianSSMforAS")
-  assignments <- .ssm_numeric_options(predictors)
+  assignments <- .ssmNumericOptions(predictors)
   options[names(assignments)] <- assignments
-  for (name in c("plotsStateTimeSeries", "plotsPosteriorPredictive", "plotsLatestDefectRate",
-                 "plotsPredictorCoefficients", "mcmcDiagnosticsOverviewTable", "mcmcDiagnosticsPrint"))
+  for (name in c("plotStateTimeSeries", "plotPosteriorPredictive", "plotLatestDefectRate",
+                 "plotPredictorCoefficient", "mcmcDiagnosticOverviewTable", "mcmcDiagnosticReport"))
     options[[name]] <- FALSE
   options
 }
 
-.ssm_expect_coefficients <- function(result, predictors, fixture) {
+.ssmExpectCoefficients <- function(result, predictors, fixture) {
   table <- result$results$predictorSummary
   if (!length(predictors)) {
     expect_null(table)
@@ -384,7 +384,7 @@ test_that("valid inputs silently replace old errors and a loader failure shows a
 }
 
 test_that("automatic coefficient summaries use all draws and saved labels for one to three predictors", {
-  fixture <- .ssm_coefficient_fixture()
+  fixture <- .ssmCoefficientFixture()
   # Only fitting and unrelated diagnostics are replaced; result construction and
   # table serialization use the normal JASP runner and production builders.
   testthat::local_mocked_bindings(
@@ -394,12 +394,12 @@ test_that("automatic coefficient summaries use all draws and saved labels for on
     .package = "jaspAcceptanceSampling")
   csv <- tempfile(fileext = ".csv")
   on.exit(unlink(csv), add = TRUE)
-  utils::write.csv(.ssm_numeric_data(), csv, row.names = FALSE)
+  utils::write.csv(.ssmNumericData(), csv, row.names = FALSE)
   for (predictors in list("x1", c("x2", "x1"), c("x3", "x1", "x2"), character())) {
     result <- jaspTools::runAnalysis("BayesianSSMforAS", csv,
-      .ssm_coefficient_options(predictors), view = FALSE)
+      .ssmCoefficientOptions(predictors), view = FALSE)
     expect_identical(result$status, "complete")
-    .ssm_expect_coefficients(result, predictors, fixture)
+    .ssmExpectCoefficients(result, predictors, fixture)
   }
   expect_equal(fixture$generations, 4L)
 })

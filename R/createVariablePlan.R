@@ -24,46 +24,46 @@
 ##---------------------------------------------------------------
 CreateVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
   # Dependency variables
-  risk_vars <- c("aql", "prod_risk", "rql", "cons_risk")
-  pd_vars <- c("pd_lower", "pd_upper", "pd_step")
+  riskVariables <- c("acceptableQualityLevel", "producerRisk", "rejectableQualityLevel", "consumerRisk")
+  proportionVariables <- c("proportionNonconformingFrom", "proportionNonconformingTo", "proportionNonconformingStep")
 
   # Check if the container already exists. Create it if it doesn't.
   if (is.null(jaspResults[["createVarContainer"]]) || jaspResults[["createVarContainer"]]$getError()) {
     createVarContainer <- createJaspContainer(title = gettext("Create Variable Plan"))
     # Common dependencies
-    createVarContainer$dependOn(risk_vars)
+    createVarContainer$dependOn(riskVariables)
     jaspResults[["createVarContainer"]] <- createVarContainer
   } else {
     createVarContainer <- jaspResults[["createVarContainer"]]
   }
 
   # Description of the plan
-  plan_op <- createJaspHtml(text = gettext("Z.LSL = (mean - LSL) / historical standard deviation\n\nAccept lot if Z.LSL >= k, otherwise reject."),
-                           dependencies=risk_vars, position=1)
-  createVarContainer[["decision_info"]] <- plan_op
+  planDescription <- createJaspHtml(text = gettext("Z.LSL = (mean - LSL) / historical standard deviation\n\nAccept lot if Z.LSL >= k, otherwise reject."),
+                           dependencies=riskVariables, position=1)
+  createVarContainer[["decision_info"]] <- planDescription
 
   sd <- "unknown"
-  if (options$sd) {
+  if (options$historicalSdKnown) {
     sd <- "known"
   }
 
   # Initialize the plan table
-  plan_table <- createJaspTable(title = gettextf("Variable Sampling Plan (Standard deviation assumed to be <b>%s</b>)", sd))
-  plan_table$transpose <- TRUE
-  plan_table$transposeWithOvertitle <- FALSE
-  plan_table$dependOn(c(risk_vars, "sd"))
-  plan_table$addColumnInfo(name = "col_0", title = "", type = "string") # Dummy row
-  plan_table$addColumnInfo(name = "col_1", title = gettext("Sample size"), type = "integer")
-  plan_table$addColumnInfo(name = "col_2", title = gettext("Critical Distance (k)"), type = "number")
-  plan_table$showSpecifiedColumnsOnly <- TRUE
-  plan_table$position <- 2
-  createVarContainer[["plan_table"]] <- plan_table
+  planTable <- createJaspTable(title = gettextf("Variable Sampling Plan (Standard deviation assumed to be <b>%s</b>)", sd))
+  planTable$transpose <- TRUE
+  planTable$transposeWithOvertitle <- FALSE
+  planTable$dependOn(c(riskVariables, "historicalSdKnown"))
+  planTable$addColumnInfo(name = "col_0", title = "", type = "string") # Dummy row
+  planTable$addColumnInfo(name = "col_1", title = gettext("Sample Size"), type = "integer")
+  planTable$addColumnInfo(name = "col_2", title = gettext("Critical Distance (k)"), type = "number")
+  planTable$showSpecifiedColumnsOnly <- TRUE
+  planTable$position <- 2
+  createVarContainer[["plan_table"]] <- planTable
 
   # Plan constraints
-  aql <- options$aql
-  rql <- options$rql
-  pa_prod <- 1 - options$prod_risk
-  pa_cons <- options$cons_risk
+  aql <- options$acceptableQualityLevel
+  rql <- options$rejectableQualityLevel
+  producerAcceptanceProbability <- 1 - options$producerRisk
+  consumerAcceptanceProbability <- options$consumerRisk
 
   # Error handling for AQL/RQL
   if (aql >= rql) {
@@ -71,38 +71,38 @@ CreateVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
     return ()
   }
   # Error handling for Producer's and Consumer's Risk
-  if (pa_prod <= pa_cons) {
-    createVarContainer$setError(gettext("1 - \u03B1 (Producer's risk) has to be greater than \u03B2 (consumer's risk)."))
+  if (producerAcceptanceProbability <= consumerAcceptanceProbability) {
+    createVarContainer$setError(gettext("1 - \u03B1 (producer's risk) has to be greater than \u03B2 (consumer's risk)."))
     return ()
   }
 
   N <- options$lotSize
   # Quality levels
-  pd_lower <- options$pd_lower
-  pd_upper <- options$pd_upper
-  pd_step <- options$pd_step
-  checkPdErrors(createVarContainer, pd_lower, pd_upper, pd_step)
+  proportionFrom <- options$proportionNonconformingFrom
+  proportionTo <- options$proportionNonconformingTo
+  proportionStep <- options$proportionNonconformingStep
+  checkPdErrors(createVarContainer, proportionFrom, proportionTo, proportionStep)
   if (createVarContainer$getError()) {
     return ()
   }
-  pd <- seq(pd_lower, pd_upper, pd_step)
+  pd <- seq(proportionFrom, proportionTo, proportionStep)
   # Add AQL and RQL to quality range
   pd <- c(pd, aql, rql)
   pd <- sort(pd)
   pd <- pd[!duplicated(pd)]
 
   # Sanity checks done. Let's find a plan that satisfies the constraints.
-  var_plan <- tryCatch(AcceptanceSampling::find.plan(PRP = c(aql, pa_prod), CRP = c(rql, pa_cons), type = "normal", s.type = sd), error = function(x) "error")
+  variablePlan <- tryCatch(AcceptanceSampling::find.plan(PRP = c(aql, producerAcceptanceProbability), CRP = c(rql, consumerAcceptanceProbability), type = "normal", s.type = sd), error = function(x) "error")
   # find.plan can result in invalid sampling plans for certain quality constraints.
   # We want to check for such outputs.
-  if (class(var_plan) == "character" && var_plan == "error") {
+  if (class(variablePlan) == "character" && variablePlan == "error") {
     createVarContainer$setError(gettext("Variable plan generated for the current quality constraints is invalid. Modify the quality constraints."))
     return ()
   }
-  n <- var_plan$n
-  k <- var_plan$k
+  n <- variablePlan$n
+  k <- variablePlan$k
   # Error checks for n
-  if (is.null(n) || is.na(n) || is.infinite(n) || is.nan(n) || (n <= 0) || (!options$sd && (n <= 1))) {
+  if (is.null(n) || is.na(n) || is.infinite(n) || is.nan(n) || (n <= 0) || (!options$historicalSdKnown && (n <= 1))) {
     createVarContainer$setError(gettext("Variable plan generated for the current quality constraints has an invalid sample size (n). Modify the quality constraints."))
     return ()
   }
@@ -111,7 +111,7 @@ CreateVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
     createVarContainer$setError(gettext("Variable plan generated for the current quality constraints has an invalid k value. Modify the quality constraints."))
     return ()
   }
-  oc_var <- AcceptanceSampling::OCvar(n = n, k = k, type = "normal", s.type = sd, pd = pd)
+  variableOperatingCharacteristic <- AcceptanceSampling::OCvar(n = n, k = k, type = "normal", s.type = sd, pd = pd)
 
   # Error check for lot size
   if (N < n) {
@@ -120,36 +120,36 @@ CreateVariablePlan <- function(jaspResults, dataset = NULL, options, ...) {
   }
 
   # Plan dataframe
-  df_plan <- data.frame(PD = pd, PA = oc_var@paccept)
-  df_plan <- na.omit(df_plan)
-  if (nrow(df_plan) == 0) {
+  planData <- data.frame(PD = pd, PA = variableOperatingCharacteristic@paccept)
+  planData <- na.omit(planData)
+  if (nrow(planData) == 0) {
     createVarContainer$setError(gettext("No valid values found in the plan. Check the inputs."))
     return ()
   }
 
   # Output options
-  output_vars <- c("showSummary", "showOCCurve", "showAOQCurve", "showATICurve")
+  outputVariables <- c("summaryTable", "operatingCharacteristicCurve", "averageOutgoingQualityCurve", "averageTotalInspectionCurve")
 
   # 0. Fill the variable plan table
-  plan_table$addRows(list("col_1" = n, "col_2" = k))
+  planTable$addRows(list("col_1" = n, "col_2" = k))
 
   # 1. Plan summary
-  if (options$showSummary) {
-    getSummary(createVarContainer, pos=3, c(pd_vars, output_vars[1]), df_plan)
+  if (options$summaryTable) {
+    getSummary(createVarContainer, pos=3, c(proportionVariables, outputVariables[1]), planData)
   }
   # 2. OC Curve
-  if (options$showOCCurve) {
-    getOCCurve(createVarContainer, pos=4, c(pd_vars, output_vars[2]), df_plan)
+  if (options$operatingCharacteristicCurve) {
+    getOCCurve(createVarContainer, pos=4, c(proportionVariables, outputVariables[2]), planData)
   }
   # 3. AOQ Curve
-  if (options$showAOQCurve) {
-    getAOQCurve(createVarContainer, pos=5, c(pd_vars, output_vars[3], "lotSize"), df_plan, options, "", n)
+  if (options$averageOutgoingQualityCurve) {
+    getAOQCurve(createVarContainer, pos=5, c(proportionVariables, outputVariables[3], "lotSize"), planData, options, "", n)
     if (createVarContainer$getError()) {
       return ()
     }
   }
   # 4. ATI Curve
-  if (options$showATICurve) {
-    getATICurve(createVarContainer, pos=6, c(pd_vars, output_vars[4], "lotSize"), df_plan, options, "", n)
+  if (options$averageTotalInspectionCurve) {
+    getATICurve(createVarContainer, pos=6, c(proportionVariables, outputVariables[4], "lotSize"), planData, options, "", n)
   }
 }

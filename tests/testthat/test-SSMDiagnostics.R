@@ -1,12 +1,12 @@
-.ssm_diagnostic_api <- function() {
+.ssmDiagnosticApi <- function() {
   list(
     compute = getFromNamespace(".asSSM_computeDiagnostics", "jaspAcceptanceSampling"),
-    messages = getFromNamespace(".asSSM_diagnosticMessages", "jaspAcceptanceSampling"),
-    html = getFromNamespace(".asSSM_diagnosticHtml", "jaspAcceptanceSampling")
+    messages = getFromNamespace(".asSSM_createDiagnosticMessages", "jaspAcceptanceSampling"),
+    html = getFromNamespace(".asSSM_createDiagnosticHtml", "jaspAcceptanceSampling")
   )
 }
 
-.ssm_diagnostic_fixture <- function(n = 2000L, chains = 4L, betaNames = "beta_predictor") {
+.ssmDiagnosticFixture <- function(n = 2000L, chains = 4L, betaNames = "beta_predictor") {
   set.seed(42)
   variables <- c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames,
                  "theta[1]", "y_pred", "jump_responsibility[1]")
@@ -24,8 +24,8 @@
 }
 
 test_that("healthy ordered draws match RStan diagnostics without checking generated quantities", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
   expect_identical(d$parameters$parameter,
                    c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", "beta_predictor"))
@@ -43,21 +43,21 @@ test_that("healthy ordered draws match RStan diagnostics without checking genera
 })
 
 test_that("divergence and treedepth checks count retained transitions without removing draws", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$sampler[[1]][c(3, 11), "divergent__"] <- 1
   input$sampler[[3]][7, "divergent__"] <- 1
   input$sampler[[2]][c(4, 8), "treedepth__"] <- c(10, 11)
   input$sampler[[4]][2, "treedepth__"] <- 9
-  draws_before <- input$draws
-  sampler_before <- input$sampler
+  drawsBefore <- input$draws
+  samplerBefore <- input$sampler
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
   expect_equal(d$sampler$divergences, c(2, 0, 1, 0))
   expect_equal(d$sampler$treedepth_hits, c(0, 2, 0, 0))
   expect_equal(d$sampler$draws, rep(2000, 4))
-  expect_identical(input$draws, draws_before)
-  expect_identical(input$sampler, sampler_before)
-  expect_identical(d$sampler_params, sampler_before)
+  expect_identical(input$draws, drawsBefore)
+  expect_identical(input$sampler, samplerBefore)
+  expect_identical(d$sampler_params, samplerBefore)
   messages <- paste(api$messages(d), collapse = " ")
   expect_match(messages, "3 divergent transitions")
   expect_match(messages, "treedepth.*2 retained")
@@ -66,8 +66,8 @@ test_that("divergence and treedepth checks count retained transitions without re
 })
 
 test_that("separated chains trigger mixing and effective-sample-size warnings", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$draws[, , "beta_predictor"] <- sweep(input$draws[, , "beta_predictor"] * 0.1,
                                              2, c(-8, -4, 4, 8), "+")
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
@@ -81,9 +81,9 @@ test_that("separated chains trigger mixing and effective-sample-size warnings", 
 })
 
 test_that("indexed coefficients include both singleton and multivariate predictor fits", {
-  api <- .ssm_diagnostic_api()
+  api <- .ssmDiagnosticApi()
   for (betaNames in list("beta_predictor[1]", paste0("beta_predictor[", 1:3, "]"))) {
-    input <- .ssm_diagnostic_fixture(betaNames = betaNames)
+    input <- .ssmDiagnosticFixture(betaNames = betaNames)
     d <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
     expect_identical(d$parameters$parameter,
                      c("mu1", "sigma_eta", "z_raw[1]", "z_raw[2]", betaNames))
@@ -100,8 +100,8 @@ test_that("indexed coefficients include both singleton and multivariate predicto
 
 
 test_that("E-BFMI uses consecutive energies separately within each chain", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture(n = 8L, chains = 2L)
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture(n = 8L, chains = 2L)
   input$sampler[[1]][, "energy__"] <- 1:8
   input$sampler[[2]][, "energy__"] <- c(1, 8, 2, 7, 3, 6, 4, 5)
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
@@ -114,8 +114,8 @@ test_that("E-BFMI uses consecutive energies separately within each chain", {
 })
 
 test_that("constant and nonfinite sampled parameters are unavailable rather than reassuring", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$draws[, 1, "z_raw[1]"] <- 0
   input$draws[7, 2, "beta_predictor"] <- Inf
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
@@ -134,8 +134,8 @@ test_that("constant and nonfinite sampled parameters are unavailable rather than
 })
 
 test_that("missing, constant and nonfinite sampler information cannot pass its checks", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$sampler[[1]] <- input$sampler[[1]][, c("divergent__", "treedepth__"), drop = FALSE]
   input$sampler[[2]][, "energy__"] <- 7
   input$sampler[[3]][2, "energy__"] <- NA_real_
@@ -151,20 +151,20 @@ test_that("missing, constant and nonfinite sampler information cannot pass its c
   expect_match(messages, "E-BFMI is unavailable")
   expect_match(messages, "refit|Refit")
 
-  missing_chain <- api$compute(input$draws, input$sampler[1], maxTreedepth = 10L)
-  expect_true(all(is.na(missing_chain$sampler$draws[2:4])))
+  missingChain <- api$compute(input$draws, input$sampler[1], maxTreedepth = 10L)
+  expect_true(all(is.na(missingChain$sampler$draws[2:4])))
 })
 
 test_that("one chain, insufficient draws and missing requested chains are reported", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture(chains = 1L)
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture(chains = 1L)
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
   expect_true(all(is.na(d$parameters$rhat)))
   expect_true(all(is.finite(d$parameters$ess_bulk)))
   expect_match(paste(api$messages(d), collapse = " "), "Only one chain.*multiple chains")
 
   for (n in c(5L, 6L)) {
-    input <- .ssm_diagnostic_fixture(n = n)
+    input <- .ssmDiagnosticFixture(n = n)
     d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
     metrics <- unlist(d$parameters[c("rhat", "ess_bulk", "ess_tail")], use.names = FALSE)
     if (n == 5L) {
@@ -177,7 +177,7 @@ test_that("one chain, insufficient draws and missing requested chains are report
       expect_false(any(grepl("Fewer than six", api$messages(d))))
     }
   }
-  input <- .ssm_diagnostic_fixture(chains = 2L)
+  input <- .ssmDiagnosticFixture(chains = 2L)
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L, expectedChains = 4L)
   expect_equal(d$chains, 2)
   expect_equal(d$expected_chains, 4)
@@ -185,8 +185,8 @@ test_that("one chain, insufficient draws and missing requested chains are report
 })
 
 test_that("thinning preserves retained checks but disables consecutive-energy E-BFMI", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$sampler[[1]][2, "divergent__"] <- 1
   input$sampler[[2]][4, "treedepth__"] <- 10
   full <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
@@ -198,12 +198,12 @@ test_that("thinning preserves retained checks but disables consecutive-energy E-
   expect_equal(thinned$thin, 3L)
   messages <- paste(api$messages(thinned), collapse = " ")
   expect_match(messages, "counts cover only retained transitions")
-  expect_match(messages, "Thin = 1")
+  expect_match(messages, "Thinning = 1")
 })
 
 test_that("diagnostic warning thresholds have explicit inclusive and strict boundaries", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 10L)
   d$parameters$rhat <- 1
   d$parameters$ess_bulk <- d$parameters$ess_tail <- 400
@@ -221,21 +221,21 @@ test_that("diagnostic warning thresholds have explicit inclusive and strict boun
 })
 
 test_that("unavailable cached diagnostics and malformed inputs do not imply successful checks", {
-  api <- .ssm_diagnostic_api()
+  api <- .ssmDiagnosticApi()
   for (unavailable in list(NULL, list(error = "diagnostic extraction failed"))) {
     messages <- paste(api$messages(unavailable), collapse = " ")
     expect_match(messages, "unavailable|could not be calculated")
     expect_match(messages, "Refit|refit")
     expect_false(grepl("No diagnostic thresholds were exceeded", api$html(unavailable)))
   }
-  input <- .ssm_diagnostic_fixture(n = 6L)
+  input <- .ssmDiagnosticFixture(n = 6L)
   expect_error(api$compute(matrix(1, 6, 4), input$sampler, 10L), "iterations by chains")
   generated <- input$draws[, , c("theta[1]", "y_pred"), drop = FALSE]
   expect_error(api$compute(generated, input$sampler, 10L), "No sampled parameters")
 })
 
 
-.ssm_report_fixture <- function(diagnostics) {
+.ssmReportFixture <- function(diagnostics) {
   report <- getFromNamespace(".asSSM_reportDiagnostics", "jaspAcceptanceSampling")
   environment(report) <- list2env(list(createJaspHtml = function(...) list(...)),
                                   parent = environment(report))
@@ -245,8 +245,8 @@ test_that("unavailable cached diagnostics and malformed inputs do not imply succ
 }
 
 test_that("a failure confined to a later coefficient produces a visible warning", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture(betaNames = paste0("beta_predictor[", 1:3, "]"))
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture(betaNames = paste0("beta_predictor[", 1:3, "]"))
   input$draws[, , "beta_predictor[3]"] <- sweep(input$draws[, , "beta_predictor[3]"] * 0.1,
                                                2, c(-8, -4, 4, 8), "+")
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
@@ -257,8 +257,8 @@ test_that("a failure confined to a later coefficient produces a visible warning"
   expect_true(all(earlier$rhat < 1.01))
   expect_match(paste(api$messages(d), collapse = " "), "R-hat.*beta_predictor\\[3\\]")
 
-  fixture <- .ssm_report_fixture(d)
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+  fixture <- .ssmReportFixture(d)
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
   warning <- fixture$results[["samplerDiagnostics"]]
   expect_identical(warning$title, "Sampling Warnings")
   expect_match(warning$text, "beta_predictor\\[3\\]")
@@ -266,15 +266,15 @@ test_that("a failure confined to a later coefficient produces a visible warning"
 })
 
 test_that("healthy diagnostics are optional and switching them off clears the report", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   d <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
-  fixture <- .ssm_report_fixture(d)
-  cached_fit <- fixture$results[["fit"]]
+  fixture <- .ssmReportFixture(d)
+  cachedFit <- fixture$results[["fit"]]
 
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = TRUE))
   full <- fixture$results[["samplerDiagnostics"]]
   expect_identical(full$title, "Computational Diagnostics")
   expect_match(full$text, "No diagnostic thresholds were exceeded")
@@ -282,24 +282,24 @@ test_that("healthy diagnostics are optional and switching them off clears the re
   expect_match(full$text, "maximum rank-normalized split R-hat")
   expect_match(full$text, "E-BFMI")
 
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
-  expect_identical(fixture$results[["fit"]], cached_fit)
+  expect_identical(fixture$results[["fit"]], cachedFit)
 })
 
 test_that("problematic and unavailable diagnostics warn even when printing is off", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$sampler[[1]][2, "divergent__"] <- 1
   bad <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
-  single <- .ssm_diagnostic_fixture(chains = 1L)
-  one_chain <- api$compute(single$draws, single$sampler, maxTreedepth = 15L)
-  cases <- list(bad, one_chain, NULL, list(error = "diagnostic extraction failed"))
+  single <- .ssmDiagnosticFixture(chains = 1L)
+  oneChain <- api$compute(single$draws, single$sampler, maxTreedepth = 15L)
+  cases <- list(bad, oneChain, NULL, list(error = "diagnostic extraction failed"))
   patterns <- c("1 divergent transitions", "Only one chain", "unavailable", "could not be calculated")
 
   for (i in seq_along(cases)) {
-    fixture <- .ssm_report_fixture(cases[[i]])
-    fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+    fixture <- .ssmReportFixture(cases[[i]])
+    fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
     warning <- fixture$results[["samplerDiagnostics"]]
     expect_identical(warning$title, "Sampling Warnings")
     expect_match(warning$text, "Sampling requires attention")
@@ -309,8 +309,8 @@ test_that("problematic and unavailable diagnostics warn even when printing is of
     expect_false(grepl("No diagnostic thresholds were exceeded", warning$text, fixed = TRUE))
   }
 
-  fixture <- .ssm_report_fixture(bad)
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
+  fixture <- .ssmReportFixture(bad)
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = TRUE))
   full <- fixture$results[["samplerDiagnostics"]]
   expect_identical(full$title, "Computational Diagnostics")
   expect_match(full$text, "1 divergent transitions")
@@ -320,29 +320,29 @@ test_that("problematic and unavailable diagnostics warn even when printing is of
 })
 
 test_that("warnings clear after a healthy fit and stale reports clear without a fit", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   healthy <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
   input$sampler[[1]][2, "divergent__"] <- 1
   bad <- api$compute(input$draws, input$sampler, maxTreedepth = 15L)
-  fixture <- .ssm_report_fixture(bad)
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+  fixture <- .ssmReportFixture(bad)
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
   expect_false(is.null(fixture$results[["samplerDiagnostics"]]))
 
   fixture$results[["fit"]] <- list(object = list(diagnostics = healthy))
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = FALSE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = FALSE))
   expect_null(fixture$results[["samplerDiagnostics"]])
 
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = TRUE))
   expect_false(is.null(fixture$results[["samplerDiagnostics"]]))
   fixture$results[["fit"]] <- NULL
-  fixture$report(fixture$results, list(mcmcDiagnosticsPrint = TRUE))
+  fixture$report(fixture$results, list(mcmcDiagnosticReport = TRUE))
   expect_null(fixture$results[["samplerDiagnostics"]])
 })
 
 test_that("rounded initial probabilities do not mask mixing of their sampled log odds", {
-  api <- .ssm_diagnostic_api()
-  input <- .ssm_diagnostic_fixture()
+  api <- .ssmDiagnosticApi()
+  input <- .ssmDiagnosticFixture()
   input$draws[, , "mu1"] <- input$draws[, , "mu1"] + 1000
   # Probability-scale output rounds to one, while sampled log odds still vary.
   expect_true(all(plogis(input$draws[, , "mu1"]) == 1))
