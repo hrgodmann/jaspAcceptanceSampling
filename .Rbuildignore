@@ -1,7 +1,6 @@
 ^renv$
 ^renv\.lock$
 ^\.Rprofile$
-^examples$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.travis\.yml$

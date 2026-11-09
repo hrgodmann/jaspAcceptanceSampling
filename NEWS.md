@@ -22,7 +22,8 @@
 * Bayesian Sampling reports the acceptance number for the observed sample size and selected Bayes-factor target, shows the planning prior parameters, and provides more informative explanations when no sampling plan meets the target.
 
 ## Changed
-* Three-region impartial priors allow any Beta shape by default. Shape constraints are optional; saved selections are retained.
+* Moved the downloadable Bayesian examples into `tests/testthat`: saved analyses are in `jaspfiles/other`, and `data_with_predictor.csv` remains available with import instructions in the README.
+* Three-region impartial priors offer Any shape as the default dropdown choice, alongside two shape restrictions. Saved selections are retained.
 * Standardized option names and choice values across the module. Classical analyses saved with earlier versions retain their settings through an automatic upgrade; the bundled Bayesian examples use the updated names.
 * Bayesian Sampling describes evidence for quality below versus at or above the RQL separately from whether the selected Bayes-factor target was reached, including exact target equality and targets at or below one.
 * Bayesian Sampling consistently describes counted items as defectives and their rate as the proportion defective.
@@ -34,7 +35,7 @@
 * State-space model selection now follows the covariate assignments. A saved beta analysis with a retained covariate assignment uses that covariate on recalculation, even if its old model selector was set to exclude predictors. Clear the assignment to fit the model without covariates.
 
 ## Fixed
-* Simplified the Bayesian Sampling prior selector with visible shape choices, conditional settings directly beneath each prior, and separate planning criteria.
+* Aligned the Bayesian Sampling prior settings beside their choices in a compact layout. Inactive settings remain visible, with optional shape constraints and separate planning criteria.
 * Unified the AQL/RQL labels and help in both Bayesian analyses, including the alternative term LTPD.
 * Standardized capitalization across analysis controls, help text, and output tables, and shortened the state-space summary group title to Selected Parameters.
 * Mathematical notation in the state-space help remains readable when the help viewer's equation rendering is unavailable.

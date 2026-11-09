@@ -44,7 +44,7 @@ The organization of the analyses within the Acceptance Sampling module in JASP i
 
 ## Example Data
 
-[`examples/data_with_predictor.csv`](examples/data_with_predictor.csv) provides
+[`tests/testthat/data_with_predictor.csv`](tests/testthat/data_with_predictor.csv) provides
 50 simulated lots for trying the Bayesian analyses. Each lot contains 1,000 items,
 of which 78 were inspected. The file is copied unchanged from
 `BayesianLotSampling/codeRevision/SimData/data_with_predictor.csv`.
@@ -75,9 +75,15 @@ and enter the last lot's summary counts: 9 observed defects, a sample size of 78
 and a lot size of 1,000. Select **Inference decision table** to display the result.
 This analysis uses summary inputs rather than column assignments.
 
-The CSV and the existing `BaySSM.jasp` and `BaySampl.jasp` files are repository
-examples to download and open directly. They are not automatically added to
-JASP's Data Library or installed with the R package.
+The CSV and the saved analyses
+[`BaySSM.jasp`](tests/testthat/jaspfiles/other/BaySSM.jasp) and
+[`BaySampl.jasp`](tests/testthat/jaspfiles/other/BaySampl.jasp) are kept with the
+module's tests and can also be downloaded and opened directly in JASP. They are
+not automatically added to JASP's Data Library. `BaySSM.jasp` contains completed
+analyses with and without the `temperature` predictor, using the same embedded
+30-lot dataset in both cases. This saved dataset differs from the 50-lot CSV above.
+`BaySampl.jasp` contains planning and inference examples for the two-region
+unimodal prior and the three-region prior without a shape constraint.
 
 ## Maintainers
 

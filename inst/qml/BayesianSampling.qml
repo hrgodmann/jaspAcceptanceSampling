@@ -98,9 +98,13 @@ Form
 			info:	qsTr("Select a Beta prior for the lot proportion defective. The selected prior is used for both planning " +
 				"and inference.")
 			name:	"planningPriorDistribution"
+			columns: 2
+
+			// Shared columns align settings across priors without fixed label widths.
 
 			RadioButton
 			{
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 				value:		"impartial"
 				label:		qsTr("Impartial (two-region)")
 				info:		qsTr("Assigns 50% prior probability below RQL and 50% above it. Choose a unimodal prior with an interior " +
@@ -108,162 +112,106 @@ Form
 					"to AQL. Incompatible combinations produce an error; the analysis does not automatically change the " +
 					"shape, location or probability split.")
 				checked:	true
+			}
 
-				Group
+			Group
+			{
+				id:					priorTwoRegionSettings
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+				columns: 2
+				enabled: priorPlanGroup.value === "impartial"
+
+				DropDown
 				{
-					id:					priorTwoRegionSettings
-					visible:			priorPlanGroup.value === "impartial"
-					enabled:			visible
+					id:			impartialShape
+					name:		"planningPriorImpartialShape"
+					label:		""
+					infoLabel:	qsTr("Two-region prior shape")
+					info:		qsTr("Both shapes assign half of the prior probability below RQL. For Unimodal (the default), the location " +
+						"is the peak and RQL must lie strictly between that mode and 0.5. For U-shaped, the location is the " +
+						"interior minimum and the minimum and RQL must lie on opposite sides of 0.5. Both the location and " +
+						"RQL must be strictly between 0 and 1.") + "\n\n" +
+						qsTr("A location and RQL both equal to 0.5 leave infinitely many priors of either shape possible. Choose " +
+						"Custom to specify the desired parameters.")
 
-					RadioButtonGroup
+					indexDefaultValue: 0
+					values: [
+						{ label: qsTr("Unimodal"), value: "unimodal" },
+						{ label: qsTr("U-shaped"), value: "uShaped" }
+					]
+				}
+
+				CheckBox
+				{
+					id:					impartialCustomLocation
+					name:				"planningPriorImpartialCustomLocation"
+					label:				impartialShape.value === "uShaped" ? qsTr("Custom minimum") : qsTr("Custom mode")
+					infoLabel:			qsTr("Two-region custom location")
+					info:				qsTr("When unchecked, AQL is used as the location. Changing shape retains the location; incompatible combinations show an error.")
+					checked:			false
+					childrenOnSameRow:	true
+
+					DoubleField
 					{
-						id:			impartialShape
-						name:		"planningPriorImpartialShape"
-						title:		qsTr("Prior Shape")
-						infoLabel:	qsTr("Two-region prior shape")
-						info:		qsTr("Both shapes assign half of the prior probability below RQL. For Unimodal (the default), the location " +
-							"is the peak and RQL must lie strictly between that mode and 0.5. For U-shaped, the location is the " +
-							"interior minimum and the minimum and RQL must lie on opposite sides of 0.5. Both the location and " +
-							"RQL must be strictly between 0 and 1.") + "\n\n" +
-							qsTr("A location and RQL both equal to 0.5 leave infinitely many priors of either shape possible. Choose " +
-							"Custom to specify the desired parameters.")
-
-						RadioButton
-						{
-							value:		"unimodal"
-							label:		qsTr("Unimodal")
-							checked:	true
-						}
-						RadioButton
-						{
-							value:	"uShaped"
-							label:	qsTr("U-shaped")
-						}
-					}
-
-					CheckBox
-					{
-						id:					impartialCustomLocation
-						name:				"planningPriorImpartialCustomLocation"
-						label:				impartialShape.value === "uShaped" ? qsTr("Custom minimum") : qsTr("Custom mode")
-						infoLabel:			qsTr("Two-region custom location")
-						info:				qsTr("When unchecked, AQL is used as the location. Changing shape retains the location; incompatible combinations show an error.")
-						checked:			false
-						childrenOnSameRow:	true
-
-						DoubleField
-						{
-							name:			"planningPriorImpartialLocation"
-							label:			""
-							infoLabel:		qsTr("Prior location")
-							afterLabel:		impartialCustomLocation.checked ? "" : qsTr("(default: AQL)")
-							info:			qsTr("Location of the interior peak for Unimodal or the interior minimum for U-shaped, between 0 and 1. " +
-								"Switching shape retains this value.")
-							defaultValue:	0.05
-							min:			0
-							max:			1
-							inclusive:		JASP.None
-							decimals:		6
-						}
+						name:			"planningPriorImpartialLocation"
+						label:			""
+						infoLabel:		qsTr("Prior location")
+						afterLabel:		impartialCustomLocation.checked ? "" : qsTr("(default: AQL)")
+						info:			qsTr("Location of the interior peak for Unimodal or the interior minimum for U-shaped, between 0 and 1. " +
+							"Switching shape retains this value.")
+						defaultValue:	0.05
+						min:			0
+						max:			1
+						inclusive:		JASP.None
+						decimals:		6
 					}
 				}
 			}
 
 			RadioButton
 			{
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 				value:	"impartialThreeRegion"
 				label:	qsTr("Impartial (three-region)")
 				info:	qsTr("Assigns one third of the prior probability to each of Good (below AQL), Middle (between AQL and " +
 					"RQL), and Bad (above RQL). The limits must satisfy 0 < AQL < RQL < 1.")
+			}
 
-				Group
+			Group
+			{
+				id:					priorThreeRegionSettings
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+				enabled: priorPlanGroup.value === "impartialThreeRegion"
+
+				DropDown
 				{
-					id:					priorThreeRegionSettings
-					visible:			priorPlanGroup.value === "impartialThreeRegion"
-					enabled:			visible
+					id:			priorThreeRegionShapeConstraint
+					name:		"planningPriorThreeRegionShapeConstraint"
+					label:		""
+					infoLabel:	qsTr("Three-region shape constraint")
+					info:		qsTr("Any shape (the default) applies no additional shape restriction. Alternatively, exclude " +
+						"U-shapes (alpha >= 1 or beta >= 1), or require both parameters to be at least 1. The equal-thirds " +
+						"prior must satisfy the selected constraint. Incompatible quality limits and shape constraints " +
+						"produce an error. Change the limits or constraint; the probability split is not changed.")
 
-					RadioButtonGroup
-					{
-						id:						priorThreeRegionShapeConstraint
-						name:					"planningPriorThreeRegionShapeConstraint"
-						title:					qsTr("Shape Constraint (Optional)")
-						infoLabel:				qsTr("Three-region shape constraint")
-						info:					qsTr("Leave both choices unchecked to allow any Beta shape (the default). Select at most one constraint: " +
-							"exclude U-shapes (alpha >= 1 or beta >= 1), or require both parameters to be " +
-							"at least 1. The equal-thirds prior must satisfy the selected constraint. Incompatible quality limits " +
-							"and shape constraints produce an error. Change the limits or constraint; the probability split is " +
-							"not changed.")
-
-						// Preserve the saved string option while allowing both visible choices to be unchecked.
-						function synchronizeChoices()
-						{
-							threeRegionExcludeUShaped.checked = value === "nonUShaped"
-							threeRegionBothAtLeastOne.checked = value === "bothAtLeastOne"
-						}
-
-						onValueChanged:			synchronizeChoices()
-						onInitializedChanged:	if (initialized) synchronizeChoices()
-
-						RadioButton
-						{
-							id:			priorThreeRegionNone
-							value:		"none"
-							visible:	false
-							checked:	true
-						}
-						RadioButton
-						{
-							id:			priorThreeRegionNonUShaped
-							value:		"nonUShaped"
-							visible:	false
-						}
-						RadioButton
-						{
-							id:			priorThreeRegionBothAtLeastOne
-							value:		"bothAtLeastOne"
-							visible:	false
-						}
-
-						CheckBox
-						{
-							id:			threeRegionExcludeUShaped
-							label:		qsTr("Exclude U-shaped")
-							info:		qsTr("Requires at least one of alpha or beta to be at least 1, allowing monotone priors but excluding U-shaped priors.")
-							isBound:	false
-							onCheckedChanged:
-							{
-								if (priorThreeRegionShapeConstraint.initialized)
-								{
-									if (checked && priorThreeRegionShapeConstraint.value !== "nonUShaped")
-										priorThreeRegionNonUShaped.click()
-									else if (!checked && priorThreeRegionShapeConstraint.value === "nonUShaped")
-										priorThreeRegionNone.click()
-								}
-							}
-						}
-						CheckBox
-						{
-							id:			threeRegionBothAtLeastOne
-							label:		qsTr("\u03B1 \u2265 1 and \u03B2 \u2265 1")
-							info:		qsTr("Requires both alpha and beta to be at least 1, also excluding monotone priors that have either parameter below 1.")
-							isBound:	false
-							onCheckedChanged:
-							{
-								if (priorThreeRegionShapeConstraint.initialized)
-								{
-									if (checked && priorThreeRegionShapeConstraint.value !== "bothAtLeastOne")
-										priorThreeRegionBothAtLeastOne.click()
-									else if (!checked && priorThreeRegionShapeConstraint.value === "bothAtLeastOne")
-										priorThreeRegionNone.click()
-								}
-							}
-						}
-					}
+					toolTip: value === "none"
+						? qsTr("Uses the equal-thirds Beta prior without additional shape restrictions.")
+						: value === "nonUShaped"
+							? qsTr("Requires at least one of alpha or beta to be at least 1, allowing monotone priors but excluding U-shaped priors.")
+							: qsTr("Requires both alpha and beta to be at least 1, also excluding monotone priors that have either parameter below 1.")
+					indexDefaultValue: 0
+					values: [
+						{ label: qsTr("Any shape"), value: "none" },
+						{ label: qsTr("Exclude U-shaped"), value: "nonUShaped" },
+						{ label: qsTr("\u03B1 \u2265 1 and \u03B2 \u2265 1"), value: "bothAtLeastOne" }
+					]
 				}
 			}
 
 			RadioButton
 			{
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+				Layout.columnSpan: priorPlanGroup.columns
 				value:	"uniform"
 				label:	qsTr("Uniform")
 				info:	qsTr("Uses a Beta(1, 1) prior.")
@@ -271,36 +219,37 @@ Form
 
 			RadioButton
 			{
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 				value:	"custom"
 				label:	qsTr("Custom")
 				info:	qsTr("Specify the two positive shape parameters of the Beta prior.")
+			}
 
-				Group
+			Group
+			{
+				id:					priorCustomSettings
+				Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+				enabled: priorPlanGroup.value === "custom"
+				columns:			2
+
+				DoubleField
 				{
-					id:					priorCustomSettings
-					visible:			priorPlanGroup.value === "custom"
-					enabled:			visible
-					columns:			2
+					name:			"planningPriorAlpha"
+					label:			qsTr("\u03B1")
+					info:			qsTr("First shape parameter (alpha) of the custom Beta prior.")
+					defaultValue:	1
+					min:			0
+					max:			10000
+				}
 
-					DoubleField
-					{
-						name:			"planningPriorAlpha"
-						label:			qsTr("\u03B1")
-						info:			qsTr("First shape parameter (alpha) of the custom Beta prior.")
-						defaultValue:	1
-						min:			0
-						max:			10000
-					}
-
-					DoubleField
-					{
-						name:			"planningPriorBeta"
-						label:			qsTr("\u03B2")
-						info:			qsTr("Second shape parameter (beta) of the custom Beta prior.")
-						defaultValue:	1
-						min:			0
-						max:			10000
-					}
+				DoubleField
+				{
+					name:			"planningPriorBeta"
+					label:			qsTr("\u03B2")
+					info:			qsTr("Second shape parameter (beta) of the custom Beta prior.")
+					defaultValue:	1
+					min:			0
+					max:			10000
 				}
 			}
 		}
